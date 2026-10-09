@@ -35,6 +35,11 @@ static BUNDLED: &[&[u8]] = &[
     include_bytes!("../../../assets/fonts/Inter-Medium.ttf"),
     include_bytes!("../../../assets/fonts/Inter-SemiBold.ttf"),
     include_bytes!("../../../assets/fonts/JetBrainsMono-Regular.ttf"),
+    // Urdu/Arabic fonts (OFL licensed).
+    include_bytes!("../../../assets/fonts/NotoNastaliqUrdu.ttf"),
+    include_bytes!("../../../assets/fonts/NotoNaskhArabic.ttf"),
+    include_bytes!("../../../assets/fonts/Amiri-Regular.ttf"),
+    include_bytes!("../../../assets/fonts/Amiri-Bold.ttf"),
 ];
 
 #[derive(Clone)]

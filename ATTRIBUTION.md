@@ -61,3 +61,10 @@ Generated-in-code art is original and has no file to list: the UI icon set (`cra
 
 ## Input method design
 - Urdu phonetic keyboard layout and Urdu↔Roman transliteration tables in `crates/input` are adapted from Naseem Amjad's Urdu Nigar (https://github.com/naseem1amjad/urdunigar-rray-version, `Form1.cs`: `setUrduPhoneticUnicodes`, `setUrduUnicode2Roman`). Reimplemented in Rust; no code copied.
+| `assets/fonts/NotoNastaliqUrdu.ttf` | Google Fonts / Noto Project Authors | https://github.com/google/fonts | OFL-1.1 (`assets/fonts/OFL-NotoNastaliqUrdu.txt`) | Urdu Nastaleeq font for Urdu document text |
+| `assets/fonts/NotoNaskhArabic.ttf` | Google Fonts / Noto Project Authors | https://github.com/google/fonts | OFL-1.1 (`assets/fonts/OFL-NotoNaskhArabic.txt`) | Arabic Naskh font for Arabic document text |
+| `assets/fonts/Amiri-Regular.ttf` | Khaled Hosny / Amiri Project | https://github.com/google/fonts | OFL-1.1 (`assets/fonts/OFL-Amiri.txt`) | Arabic Naskh font, excellent for Quranic/scholarly text |
+| `assets/fonts/Amiri-Bold.ttf` | Khaled Hosny / Amiri Project | https://github.com/google/fonts | OFL-1.1 (`assets/fonts/OFL-Amiri.txt`) | Arabic Naskh bold for headings |
+| `assets/fonts/OFL-NotoNastaliqUrdu.txt` | (licence text) | upstream project | — |  |
+| `assets/fonts/OFL-NotoNaskhArabic.txt` | (licence text) | upstream project | — |  |
+| `assets/fonts/OFL-Amiri.txt` | (licence text) | upstream project | — |  |
