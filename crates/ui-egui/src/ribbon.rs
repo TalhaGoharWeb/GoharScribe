@@ -154,8 +154,9 @@ fn home(app: &mut GoharScribeApp, ui: &mut Ui) {
             crate::widgets::row(ui, |ui| {
                 let font = st.get("font").and_then(Value::as_str).unwrap_or("").to_string();
                 let fams = app.previews.families();
-                let prev = app.previews.font_preview_fn();
-                if let Some(f) = combo(ui, "font", 150.0, &font, &fams, Some(&*prev)) {
+                // Font previews disabled: rendering each font's preview via snippet()
+                // hangs on complex fonts (e.g., Noto Nastaliq Urdu). Use plain labels.
+                if let Some(f) = combo(ui, "font", 150.0, &font, &fams, None) {
                     let _ = app.run("format.font", json!({"name": f}));
                 }
                 let size = st
