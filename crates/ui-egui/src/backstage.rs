@@ -4,7 +4,7 @@ use egui::{Align2, Rect, Sense, Stroke, Ui, pos2, vec2};
 use serde_json::json;
 
 use crate::theme::{APP_COLOR, Tokens, medium, regular, semibold};
-use crate::{WordApp, icons};
+use crate::{GoharScribeApp, icons};
 
 const PAGES: [(&str, &str); 9] = [
     ("home", "Home"),
@@ -18,7 +18,7 @@ const PAGES: [(&str, &str); 9] = [
     ("options", "Options"),
 ];
 
-pub fn show(app: &mut WordApp, ui: &mut Ui) {
+pub fn show(app: &mut GoharScribeApp, ui: &mut Ui) {
     let t = Tokens::get(ui.ctx());
     egui::Panel::left("backstage_nav")
         .exact_size(200.0)
@@ -99,7 +99,7 @@ fn heading(ui: &mut Ui, s: &str) {
     ui.add_space(16.0);
 }
 
-fn template_tile(ui: &mut Ui, app: &mut WordApp, label: &str, template: &str) {
+fn template_tile(ui: &mut Ui, app: &mut GoharScribeApp, label: &str, template: &str) {
     let t = Tokens::get(ui.ctx());
     ui.vertical(|ui| {
         let (r, resp) = ui.allocate_exact_size(vec2(150.0, 194.0), Sense::click());
@@ -139,7 +139,7 @@ fn template_tile(ui: &mut Ui, app: &mut WordApp, label: &str, template: &str) {
     });
 }
 
-fn new_page(app: &mut WordApp, ui: &mut Ui) {
+fn new_page(app: &mut GoharScribeApp, ui: &mut Ui) {
     let hour = goharscribe_engine::cmd::now_iso().get(11..13).and_then(|h| h.parse::<u32>().ok()).unwrap_or(9);
     heading(
         ui,
@@ -163,7 +163,7 @@ fn new_page(app: &mut WordApp, ui: &mut Ui) {
     open_list(app, ui);
 }
 
-fn open_list(app: &mut WordApp, ui: &mut Ui) {
+fn open_list(app: &mut GoharScribeApp, ui: &mut Ui) {
     let t = Tokens::get(ui.ctx());
     ui.label(egui::RichText::new("Recent").font(semibold(16.0)));
     ui.add_space(6.0);
@@ -187,7 +187,7 @@ fn open_list(app: &mut WordApp, ui: &mut Ui) {
     }
 }
 
-fn open_page(app: &mut WordApp, ui: &mut Ui) {
+fn open_page(app: &mut GoharScribeApp, ui: &mut Ui) {
     heading(ui, "Open");
     if ui.button(egui::RichText::new("📂  Browse…").font(medium(14.0))).clicked() {
         let _ = app.run("ui.openFileDialog", json!({}));
@@ -196,7 +196,7 @@ fn open_page(app: &mut WordApp, ui: &mut Ui) {
     open_list(app, ui);
 }
 
-fn info_page(app: &mut WordApp, ui: &mut Ui) {
+fn info_page(app: &mut GoharScribeApp, ui: &mut Ui) {
     heading(ui, "Info");
     let info = app.session.run("file.info", &json!({})).unwrap_or_default();
     ui.columns(2, |cols| {
@@ -223,7 +223,7 @@ fn info_page(app: &mut WordApp, ui: &mut Ui) {
     });
 }
 
-fn export_page(app: &mut WordApp, ui: &mut Ui) {
+fn export_page(app: &mut GoharScribeApp, ui: &mut Ui) {
     heading(ui, if app.ui.backstage_page == "print" { "Print" } else { "Export" });
     ui.label("Save a copy in another format. Printing goes through a PDF you can print from any viewer.");
     ui.add_space(12.0);
@@ -251,7 +251,7 @@ fn export_page(app: &mut WordApp, ui: &mut Ui) {
     }
 }
 
-fn options_page(app: &mut WordApp, ui: &mut Ui) {
+fn options_page(app: &mut GoharScribeApp, ui: &mut Ui) {
     heading(ui, "Options");
     ui.label(egui::RichText::new("General").font(semibold(15.0)));
     ui.horizontal(|ui| {
@@ -266,7 +266,7 @@ fn options_page(app: &mut WordApp, ui: &mut Ui) {
         let _ = app.run("ui.dark", json!({"value": dark}));
     }
     ui.checkbox(&mut app.autosave, "AutoSave documents that have been saved");
-    ui.checkbox(&mut app.ui.show_discord, "Show the community button in the title bar");
+    ui.checkbox(&mut app.ui.show_github, "Show the GitHub button in the title bar");
     ui.add_space(10.0);
     ui.label(egui::RichText::new("Display").font(semibold(15.0)));
     let mut marks = app.session.view.marks;

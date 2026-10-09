@@ -3,7 +3,7 @@
 use egui::{Key, Modifiers};
 use serde_json::{Value, json};
 
-use crate::WordApp;
+use crate::GoharScribeApp;
 
 /// The registry's name for a key.
 pub fn key_name(k: Key) -> Option<&'static str> {
@@ -91,7 +91,7 @@ fn combo(m: Modifiers, key: &str, with_shift: bool) -> String {
 }
 
 /// Find and run the command bound to this key. Returns true if handled.
-fn dispatch(app: &mut WordApp, key: Key, m: Modifiers) -> bool {
+fn dispatch(app: &mut GoharScribeApp, key: Key, m: Modifiers) -> bool {
     let Some(name) = key_name(key) else { return false };
     let reg = app.session.registry.clone();
     if let Some(spec) = reg.by_shortcut(&combo(m, name, true)) {
@@ -110,7 +110,7 @@ fn dispatch(app: &mut WordApp, key: Key, m: Modifiers) -> bool {
 }
 
 /// Events for the focused canvas: text, editing keys, clipboard, IME.
-pub fn canvas_events(app: &mut WordApp, ctx: &egui::Context) {
+pub fn canvas_events(app: &mut GoharScribeApp, ctx: &egui::Context) {
     let events = ctx.input(|i| i.events.clone());
     for e in events {
         match e {
@@ -160,7 +160,7 @@ pub fn canvas_events(app: &mut WordApp, ctx: &egui::Context) {
 }
 
 /// Command shortcuts when the canvas isn't focused but no text field is either.
-pub fn global_shortcuts(app: &mut WordApp, ctx: &egui::Context) {
+pub fn global_shortcuts(app: &mut GoharScribeApp, ctx: &egui::Context) {
     if app.canvas.focused || ctx.egui_wants_keyboard_input() {
         return;
     }

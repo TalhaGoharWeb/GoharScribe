@@ -1,6 +1,6 @@
 //! GoharScribe in the browser.
 //!
-//! Runs the same [`goharscribe_ui_egui::WordApp`] as the desktop app through eframe's web runner
+//! Runs the same [`goharscribe_ui_egui::GoharScribeApp`] as the desktop app through eframe's web runner
 //! (wgpu: WebGPU where available, WebGL2 otherwise). Build with `trunk build --release` from this
 //! directory (output in `dist/web`).
 //!

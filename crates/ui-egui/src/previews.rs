@@ -9,7 +9,7 @@ use goharscribe_doc::props::CharProps;
 use goharscribe_doc::{Block, Document, Paragraph, Table, para_block};
 use serde_json::{Value, json};
 
-use crate::WordApp;
+use crate::GoharScribeApp;
 use crate::theme::{Tokens, regular};
 
 #[derive(Default)]
@@ -165,7 +165,7 @@ fn snippet_blocks(
 }
 
 /// The Home tab's Styles gallery.
-pub fn style_gallery(app: &mut WordApp, ui: &mut Ui, state: &Value) {
+pub fn style_gallery(app: &mut GoharScribeApp, ui: &mut Ui, state: &Value) {
     let t = Tokens::get(ui.ctx());
     let current = state.get("style").and_then(Value::as_str).unwrap_or("Normal").to_string();
     let styles: Vec<(String, String)> = app.session.doc.styles.gallery().iter().map(|s| (s.id.clone(), s.name.clone())).collect();
@@ -235,7 +235,7 @@ pub fn style_gallery(app: &mut WordApp, ui: &mut Ui, state: &Value) {
 }
 
 /// Design tab: style set tiles.
-pub fn style_set_gallery(app: &mut WordApp, ui: &mut Ui) {
+pub fn style_set_gallery(app: &mut GoharScribeApp, ui: &mut Ui) {
     let t = Tokens::get(ui.ctx());
     let ppp = ui.ctx().pixels_per_point();
     for name in ["default", "basic", "lines", "shaded", "casual", "centered", "minimalist"] {
@@ -268,7 +268,7 @@ pub fn style_set_gallery(app: &mut WordApp, ui: &mut Ui) {
 }
 
 /// Table Design: a tile previewing a table style.
-pub fn table_style_tile(ui: &mut Ui, app: &mut WordApp, style: &str) -> Response {
+pub fn table_style_tile(ui: &mut Ui, app: &mut GoharScribeApp, style: &str) -> Response {
     let t = Tokens::get(ui.ctx());
     let ppp = ui.ctx().pixels_per_point();
     let (r, resp) = ui.allocate_exact_size(vec2(58.0, 46.0), Sense::click());

@@ -4,10 +4,10 @@ use egui::{Stroke, Ui, vec2};
 use goharscribe_doc::{Pos, StoryRef};
 use serde_json::{Value, json};
 
-use crate::WordApp;
+use crate::GoharScribeApp;
 use crate::theme::{Tokens, regular, semibold};
 
-pub fn show(app: &mut WordApp, ui: &mut Ui) {
+pub fn show(app: &mut GoharScribeApp, ui: &mut Ui) {
     let t = Tokens::get(ui.ctx());
     if app.session.view.nav_pane {
         egui::Panel::left("nav_pane")
@@ -46,7 +46,7 @@ fn header(ui: &mut Ui, title: &str) -> bool {
     close
 }
 
-fn nav(app: &mut WordApp, ui: &mut Ui) {
+fn nav(app: &mut GoharScribeApp, ui: &mut Ui) {
     if header(ui, "Navigation") {
         let _ = app.run("view.navigationPane", json!({"value": false}));
         return;
@@ -138,7 +138,7 @@ fn nav(app: &mut WordApp, ui: &mut Ui) {
     });
 }
 
-fn styles(app: &mut WordApp, ui: &mut Ui) {
+fn styles(app: &mut GoharScribeApp, ui: &mut Ui) {
     if header(ui, "Styles") {
         let _ = app.run("view.stylesPane", json!({"value": false}));
         return;
@@ -198,7 +198,7 @@ fn styles(app: &mut WordApp, ui: &mut Ui) {
     });
 }
 
-fn comments(app: &mut WordApp, ui: &mut Ui) {
+fn comments(app: &mut GoharScribeApp, ui: &mut Ui) {
     if header(ui, "Comments") {
         let _ = app.run("view.commentsPane", json!({"value": false}));
         return;

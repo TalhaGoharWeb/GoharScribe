@@ -9,7 +9,7 @@
 //! document unless the first line is `{"empty": true}`.
 
 use goharscribe_engine::Session;
-use goharscribe_ui_egui::{ControlRequest, Services, WordApp};
+use goharscribe_ui_egui::{ControlRequest, GoharScribeApp, Services};
 
 static READY: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
@@ -24,13 +24,13 @@ fn main() {
     } else {
         goharscribe_engine::sample::sample_document()
     };
-    let mut app = WordApp::new(Session::new(doc), Services::default()).with_control(rx);
+    let mut app = GoharScribeApp::new(Session::new(doc), Services::default()).with_control(rx);
     app.integrated_titlebar = true;
     let w = lines.iter().find_map(|l| l.get("width").and_then(|v| v.as_f64())).unwrap_or(1440.0) as f32;
     let h = lines.iter().find_map(|l| l.get("height").and_then(|v| v.as_f64())).unwrap_or(900.0) as f32;
     let mut harness =
         egui_kittest::Harness::builder().with_size(egui::vec2(w, h)).with_pixels_per_point(2.0).with_max_steps(1_000_000).wgpu().build_ui_state(
-            |ui, app: &mut WordApp| {
+            |ui, app: &mut GoharScribeApp| {
                 if !READY.load(std::sync::atomic::Ordering::Relaxed) {
                     return;
                 }
@@ -71,14 +71,14 @@ fn main() {
     }
 }
 
-fn step(harness: &mut egui_kittest::Harness<'_, WordApp>) {
+fn step(harness: &mut egui_kittest::Harness<'_, GoharScribeApp>) {
     let mut raw = std::mem::take(harness.input_mut());
     harness.state_mut().raw_input_hook(&mut raw);
     *harness.input_mut() = raw;
     harness.step();
 }
 
-fn step_n(harness: &mut egui_kittest::Harness<'_, WordApp>, n: usize) {
+fn step_n(harness: &mut egui_kittest::Harness<'_, GoharScribeApp>, n: usize) {
     for _ in 0..n {
         step(harness);
     }

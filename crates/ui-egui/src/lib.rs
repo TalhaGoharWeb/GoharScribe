@@ -1,7 +1,7 @@
 //! GoharScribe's egui front end: a Word-style window (title bar with Quick Access Toolbar, ribbon,
 //! rulers, page canvas, panes, status bar, Backstage, dialogs) over `goharscribe-engine`.
 //!
-//! The UI is thin: it reads `Session` state and acts through [`WordApp::run`] (command ids), so
+//! The UI is thin: it reads `Session` state and acts through [`GoharScribeApp::run`] (command ids), so
 //! the menus, ribbon, shortcuts, control channel and MCP all reach the same behaviour.
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 
@@ -54,7 +54,7 @@ pub struct UiState {
     pub recent: Vec<String>,
     pub dark: bool,
     pub nav_tab: String,
-    pub show_discord: bool,
+    pub show_github: bool,
 }
 
 impl Default for UiState {
@@ -67,13 +67,13 @@ impl Default for UiState {
             recent: Vec::new(),
             dark: false,
             nav_tab: "headings".into(),
-            show_discord: true,
+            show_github: true,
         }
     }
 }
 
 /// The application.
-pub struct WordApp {
+pub struct GoharScribeApp {
     pub session: Session,
     pub ui: UiState,
     pub services: Services,
@@ -98,9 +98,9 @@ pub struct WordApp {
     last_autosave: f64,
 }
 
-impl WordApp {
+impl GoharScribeApp {
     pub fn new(session: Session, services: Services) -> Self {
-        WordApp {
+        GoharScribeApp {
             session,
             ui: UiState::default(),
             services,

@@ -15,7 +15,7 @@ use std::sync::mpsc::Sender;
 
 use serde_json::{Value, json};
 
-use crate::WordApp;
+use crate::GoharScribeApp;
 
 pub struct ControlRequest {
     pub method: String,
@@ -42,7 +42,7 @@ fn err(e: impl std::fmt::Display) -> Outcome {
     Outcome::Done(json!({"ok": false, "error": e.to_string()}))
 }
 
-pub fn inspect(app: &mut WordApp, ctx: &egui::Context) -> Value {
+pub fn inspect(app: &mut GoharScribeApp, ctx: &egui::Context) -> Value {
     let r = ctx.content_rect();
     let caret = crate::canvas::caret_screen(app).map(|(p, h)| json!({"x": p.x, "y": p.y, "h": h}));
     json!({
@@ -91,7 +91,7 @@ fn mods(p: &Value) -> egui::Modifiers {
     }
 }
 
-fn click_events(app: &mut WordApp, pos: egui::Pos2, button: egui::PointerButton, count: u64, m: egui::Modifiers) {
+fn click_events(app: &mut GoharScribeApp, pos: egui::Pos2, button: egui::PointerButton, count: u64, m: egui::Modifiers) {
     app.synthetic.push(egui::Event::PointerMoved(pos));
     for _ in 0..count.clamp(1, 3) {
         app.synthetic.push(egui::Event::PointerButton { pos, button, pressed: true, modifiers: m });
@@ -99,7 +99,7 @@ fn click_events(app: &mut WordApp, pos: egui::Pos2, button: egui::PointerButton,
     }
 }
 
-pub fn handle(app: &mut WordApp, ctx: &egui::Context, req: &ControlRequest) -> Outcome {
+pub fn handle(app: &mut GoharScribeApp, ctx: &egui::Context, req: &ControlRequest) -> Outcome {
     let p = &req.params;
     let s = |k: &str| p.get(k).and_then(Value::as_str);
     let f = |k: &str| p.get(k).and_then(Value::as_f64).map(|v| v as f32);

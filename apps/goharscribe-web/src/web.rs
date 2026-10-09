@@ -1,7 +1,7 @@
 //! The browser shell: web `Services`, drag-and-drop, and the eframe web runner.
 
 use goharscribe_engine::Session;
-use goharscribe_ui_egui::{Inbox, Services, WordApp};
+use goharscribe_ui_egui::{GoharScribeApp, Inbox, Services};
 use wasm_bindgen::JsCast as _;
 
 const DOC_EXTS: &[&str] = &["docx", "docm", "dotx", "odt", "rtf", "txt", "md", "html", "htm", "json"];
@@ -37,7 +37,7 @@ pub fn start() {
                     let inbox: Inbox = Inbox::default();
                     let doc =
                         if query().contains("sample") { goharscribe_engine::sample::sample_document() } else { goharscribe_doc::Document::new() };
-                    let mut app = WordApp::new(Session::new(doc), services(inbox.clone(), cc.egui_ctx.clone()));
+                    let mut app = GoharScribeApp::new(Session::new(doc), services(inbox.clone(), cc.egui_ctx.clone()));
                     app.autosave = false;
                     Ok(Box::new(WebShell { app, inbox }))
                 }),
@@ -59,7 +59,7 @@ fn query() -> String {
 /// Wraps the app to read dropped files asynchronously (browsers can't read them synchronously)
 /// and feed them through the inbox.
 struct WebShell {
-    app: WordApp,
+    app: GoharScribeApp,
     inbox: Inbox,
 }
 

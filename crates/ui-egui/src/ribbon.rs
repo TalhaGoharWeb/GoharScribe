@@ -5,15 +5,15 @@ use serde_json::{Value, json};
 
 use crate::theme::{Tokens, medium, regular, semibold};
 use crate::widgets::{CONTENT_H, LABEL_H, big, color_grid, combo, group, menu_button, small, split};
-use crate::{WordApp, icons};
+use crate::{GoharScribeApp, icons};
 
 pub const TABS: [&str; 11] = ["File", "Home", "Insert", "Draw", "Design", "Layout", "References", "Mailings", "Review", "View", "Help"];
 
-fn in_table(app: &WordApp) -> bool {
+fn in_table(app: &GoharScribeApp) -> bool {
     app.session.sel.focus.path.cell().is_some()
 }
 
-pub fn show(app: &mut WordApp, ui: &mut Ui) {
+pub fn show(app: &mut GoharScribeApp, ui: &mut Ui) {
     let t = Tokens::get(ui.ctx());
     // Tab strip.
     egui::Panel::top("tabs")
@@ -121,7 +121,7 @@ fn stack(ui: &mut Ui, add: impl FnOnce(&mut Ui)) {
     });
 }
 
-fn mi(ui: &mut Ui, app: &mut WordApp, label: &str, id: &str, params: Value) {
+fn mi(ui: &mut Ui, app: &mut GoharScribeApp, label: &str, id: &str, params: Value) {
     let sc = crate::widgets::shortcut_text(app, id);
     let enabled = crate::widgets::enabled(app, id);
     let resp = ui.add_enabled(enabled, egui::Button::new(label).shortcut_text(sc).min_size(vec2(200.0, 0.0)));
@@ -131,7 +131,7 @@ fn mi(ui: &mut Ui, app: &mut WordApp, label: &str, id: &str, params: Value) {
     }
 }
 
-fn home(app: &mut WordApp, ui: &mut Ui) {
+fn home(app: &mut GoharScribeApp, ui: &mut Ui) {
     let st = app.session.run("format.state", &json!({})).unwrap_or_default();
     let flag = |k: &str| st.get(k).and_then(Value::as_bool).unwrap_or(false);
     group(ui, "Clipboard", None, app, |ui, app| {
@@ -361,7 +361,7 @@ fn home(app: &mut WordApp, ui: &mut Ui) {
     });
 }
 
-fn insert(app: &mut WordApp, ui: &mut Ui) {
+fn insert(app: &mut GoharScribeApp, ui: &mut Ui) {
     group(ui, "Pages", None, app, |ui, app| {
         stack(ui, |ui| {
             menu_button(ui, app, "coverPage", Some("Cover Page"), "Cover Page", false, |ui, app| {
@@ -479,7 +479,7 @@ fn insert(app: &mut WordApp, ui: &mut Ui) {
     });
 }
 
-fn draw(app: &mut WordApp, ui: &mut Ui) {
+fn draw(app: &mut GoharScribeApp, ui: &mut Ui) {
     group(ui, "Drawing Tools", None, app, |ui, app| {
         big(ui, app, "select", "Select", "draw.select", json!({}), false);
         big(ui, app, "lasso", "Lasso", "draw.lasso", json!({}), false);
@@ -500,7 +500,7 @@ fn draw(app: &mut WordApp, ui: &mut Ui) {
     });
 }
 
-fn design(app: &mut WordApp, ui: &mut Ui) {
+fn design(app: &mut GoharScribeApp, ui: &mut Ui) {
     group(ui, "Themes", None, app, |ui, app| {
         menu_button(ui, app, "themes", Some("Themes"), "Themes", true, |ui, app| {
             for (name, ..) in goharscribe_engine::cmd::design::THEMES {
@@ -564,7 +564,7 @@ fn design(app: &mut WordApp, ui: &mut Ui) {
     });
 }
 
-fn layout(app: &mut WordApp, ui: &mut Ui) {
+fn layout(app: &mut GoharScribeApp, ui: &mut Ui) {
     group(ui, "Page Setup", Some("ui.dialog"), app, |ui, app| {
         menu_button(ui, app, "margins", Some("Margins"), "Margins", true, |ui, app| {
             for (l, k) in [
@@ -679,7 +679,7 @@ fn layout(app: &mut WordApp, ui: &mut Ui) {
     });
 }
 
-fn references(app: &mut WordApp, ui: &mut Ui) {
+fn references(app: &mut GoharScribeApp, ui: &mut Ui) {
     group(ui, "Table of Contents", None, app, |ui, app| {
         menu_button(ui, app, "toc", Some("Table of\nContents"), "Table of Contents", true, |ui, app| {
             mi(ui, app, "Automatic Table 1 (3 levels)", "references.toc", json!({"levels": 3}));
@@ -745,7 +745,7 @@ fn references(app: &mut WordApp, ui: &mut Ui) {
     });
 }
 
-fn mailings(app: &mut WordApp, ui: &mut Ui) {
+fn mailings(app: &mut GoharScribeApp, ui: &mut Ui) {
     group(ui, "Create", None, app, |ui, app| {
         big(ui, app, "envelope", "Envelopes", "mailings.envelopes", json!({}), false);
         big(ui, app, "labels", "Labels", "mailings.labels", json!({}), false);
@@ -781,7 +781,7 @@ fn mailings(app: &mut WordApp, ui: &mut Ui) {
     });
 }
 
-fn review(app: &mut WordApp, ui: &mut Ui) {
+fn review(app: &mut GoharScribeApp, ui: &mut Ui) {
     group(ui, "Proofing", None, app, |ui, app| {
         big(ui, app, "spelling", "Spelling &\nGrammar", "review.spelling", json!({}), false);
         stack(ui, |ui| {
@@ -852,7 +852,7 @@ fn review(app: &mut WordApp, ui: &mut Ui) {
     });
 }
 
-fn view(app: &mut WordApp, ui: &mut Ui) {
+fn view(app: &mut GoharScribeApp, ui: &mut Ui) {
     let v = app.session.view.clone();
     group(ui, "Views", None, app, |ui, app| {
         big(ui, app, "readMode", "Read\nMode", "view.readMode", json!({}), false);
@@ -909,17 +909,17 @@ fn view(app: &mut WordApp, ui: &mut Ui) {
     });
 }
 
-fn help(app: &mut WordApp, ui: &mut Ui) {
+fn help(app: &mut GoharScribeApp, ui: &mut Ui) {
     group(ui, "Help", None, app, |ui, app| {
         big(ui, app, "help", "Help", "ui.dialog", json!({"name": "about"}), false);
-        big(ui, app, "discord", "Community\nDiscord", "ui.discord", json!({}), false);
+        big(ui, app, "github", "GoharScribe\nGitHub", "ui.github", json!({}), false);
     });
     group(ui, "Agents", None, app, |ui, app| {
         big(ui, app, "macros", "Commands", "ui.dialog", json!({"name": "commands"}), false);
     });
 }
 
-fn table_design(app: &mut WordApp, ui: &mut Ui) {
+fn table_design(app: &mut GoharScribeApp, ui: &mut Ui) {
     let look = app.session.sel.focus.path.cell().and_then(|(tp, _, _)| app.session.doc.table(app.session.sel.focus.story, &tp).map(|t| t.props.look));
     group(ui, "Table Style Options", None, app, |ui, app| {
         let Some(l) = look else { return };
@@ -991,7 +991,7 @@ fn table_design(app: &mut WordApp, ui: &mut Ui) {
     });
 }
 
-fn table_layout(app: &mut WordApp, ui: &mut Ui) {
+fn table_layout(app: &mut GoharScribeApp, ui: &mut Ui) {
     group(ui, "Table", None, app, |ui, app| {
         stack(ui, |ui| {
             menu_button(ui, app, "selectTable", Some("Select"), "Select", false, |ui, app| {

@@ -10,7 +10,7 @@ use goharscribe_doc::{Pos, StoryRef};
 use goharscribe_layout::{DocLayout, Page, Placed};
 use serde_json::json;
 
-use crate::WordApp;
+use crate::GoharScribeApp;
 use crate::theme::{Tokens, regular, semibold};
 
 /// Points on screen per document point at 100% (96 px per inch, like a word processor).
@@ -72,14 +72,14 @@ pub struct Geometry {
 }
 
 /// Width of the markup area beside each page for comment balloons (points), or 0.
-pub fn markup_width(app: &WordApp) -> f32 {
+pub fn markup_width(app: &GoharScribeApp) -> f32 {
     let v = &app.session.view;
     // Word shows comments either in balloons (contextual) or in the Comments pane (list).
     let on = v.show_markup && !v.comments_pane && !v.read_mode && !v.multi_page && v.mode == goharscribe_layout::ViewMode::Print;
     if on && !app.session.doc.comments.is_empty() { 216.0 } else { 0.0 }
 }
 
-pub fn geometry(app: &WordApp, l: &DocLayout, avail: egui::Vec2) -> Geometry {
+pub fn geometry(app: &GoharScribeApp, l: &DocLayout, avail: egui::Vec2) -> Geometry {
     let v = &app.session.view;
     let markup = markup_width(app);
     let maxw = l.pages.iter().map(|p| p.w).fold(0.0f32, f32::max).max(72.0) + markup;
@@ -119,7 +119,7 @@ pub fn geometry(app: &WordApp, l: &DocLayout, avail: egui::Vec2) -> Geometry {
 }
 
 /// Fingerprint of a page's content for the texture cache.
-fn page_key(app: &WordApp, page: &Page, scale_px: f32) -> u64 {
+fn page_key(app: &GoharScribeApp, page: &Page, scale_px: f32) -> u64 {
     let mut h = std::collections::hash_map::DefaultHasher::new();
     scale_px.to_bits().hash(&mut h);
     let v = &app.session.view;
@@ -151,7 +151,7 @@ fn to_screen(origin: Pos2, page_rect: Rect, scale: f32, x: f32, y: f32) -> Pos2 
     pos2(origin.x + page_rect.min.x + x * scale, origin.y + page_rect.min.y + y * scale)
 }
 
-pub fn show(app: &mut WordApp, ui: &mut Ui) {
+pub fn show(app: &mut GoharScribeApp, ui: &mut Ui) {
     let t = Tokens::get(ui.ctx());
     let layout = app.session.layout();
     let full = ui.available_rect_before_wrap();
@@ -352,7 +352,7 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
 }
 
 /// Comment balloons in the markup area right of each page, joined to their anchors.
-fn balloons(app: &mut WordApp, ui: &mut Ui, painter: &egui::Painter, rects: &[Rect], layout: &DocLayout, scale: f32) {
+fn balloons(app: &mut GoharScribeApp, ui: &mut Ui, painter: &egui::Painter, rects: &[Rect], layout: &DocLayout, scale: f32) {
     let mw = markup_width(app);
     if mw <= 0.0 {
         return;
@@ -456,7 +456,7 @@ pub fn page_at(rects: &[Rect], scale: f32, p: Pos2) -> Option<(usize, f32, f32)>
     Some((i, (p.x - r.min.x) / scale, (p.y - r.min.y) / scale))
 }
 
-fn mouse(app: &mut WordApp, ui: &Ui, resp: &egui::Response, rects: &[Rect], layout: &DocLayout, scale: f32) {
+fn mouse(app: &mut GoharScribeApp, ui: &Ui, resp: &egui::Response, rects: &[Rect], layout: &DocLayout, scale: f32) {
     let Some(p) = resp.interact_pointer_pos().or_else(|| resp.hover_pos()) else { return };
     let Some((page, x, y)) = page_at(rects, scale, p) else { return };
     let mods = ui.input(|i| i.modifiers);
@@ -556,7 +556,7 @@ fn mouse(app: &mut WordApp, ui: &Ui, resp: &egui::Response, rects: &[Rect], layo
 }
 
 /// Horizontal and vertical rulers for the caret's page and paragraph.
-fn rulers(app: &mut WordApp, ui: &mut Ui, h: Rect, v: Rect, rects: &[Rect], layout: &DocLayout, scale: f32) {
+fn rulers(app: &mut GoharScribeApp, ui: &mut Ui, h: Rect, v: Rect, rects: &[Rect], layout: &DocLayout, scale: f32) {
     let t = Tokens::get(ui.ctx());
     let p = ui.painter();
     p.rect_filled(Rect::from_min_max(pos2(v.min.x, h.min.y), pos2(v.max.x, h.max.y)), 0.0, t.canvas);
@@ -699,28 +699,28 @@ fn rulers(app: &mut WordApp, ui: &mut Ui, h: Rect, v: Rect, rects: &[Rect], layo
 }
 
 /// Convert a page position (points) to screen coordinates (for agents and tests).
-pub fn page_to_screen(app: &WordApp, page: usize, x: f32, y: f32) -> Option<Pos2> {
+pub fn page_to_screen(app: &GoharScribeApp, page: usize, x: f32, y: f32) -> Option<Pos2> {
     let r = app.canvas.page_rects.get(page)?;
     Some(to_screen(pos2(0.0, 0.0), *r, app.canvas.scale, x, y))
 }
 
 /// Caret position on screen.
-pub fn caret_screen(app: &mut WordApp) -> Option<(Pos2, f32)> {
+pub fn caret_screen(app: &mut GoharScribeApp) -> Option<(Pos2, f32)> {
     let l = app.session.layout();
     let c = l.caret_on(&app.session.sel.focus, app.session.page_hint)?;
     let p = page_to_screen(app, c.page, c.x, c.top)?;
     Some((p, c.height * app.canvas.scale))
 }
 
-pub fn pos_from_screen(app: &mut WordApp, p: Pos2) -> Option<Pos> {
+pub fn pos_from_screen(app: &mut GoharScribeApp, p: Pos2) -> Option<Pos> {
     let (page, x, y) = page_at(&app.canvas.page_rects, app.canvas.scale, p)?;
     let story = app.session.sel.focus.story;
     app.session.layout().hit(page, x, y, story)
 }
 
-fn context_menu(app: &mut WordApp, ui: &mut Ui) {
+fn context_menu(app: &mut GoharScribeApp, ui: &mut Ui) {
     ui.set_min_width(220.0);
-    let item = |ui: &mut Ui, app: &mut WordApp, label: &str, id: &str, params: serde_json::Value| {
+    let item = |ui: &mut Ui, app: &mut GoharScribeApp, label: &str, id: &str, params: serde_json::Value| {
         let sc = crate::widgets::shortcut_text(app, id);
         let on = crate::widgets::enabled(app, id);
         if ui.add_enabled(on, egui::Button::new(label).shortcut_text(sc)).clicked() {

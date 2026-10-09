@@ -4,14 +4,14 @@ use egui::{Align2, Color32, CornerRadius, Rect, Response, Sense, Stroke, Ui, pos
 use serde_json::Value;
 
 use crate::theme::{Tokens, regular};
-use crate::{WordApp, icons};
+use crate::{GoharScribeApp, icons};
 
 /// Height of the ribbon content area (without group labels).
 pub const CONTENT_H: f32 = 66.0;
 pub const LABEL_H: f32 = 16.0;
 
 /// Shortcut text for a command (`⌘B` on macOS, `Ctrl+B` elsewhere).
-pub fn shortcut_text(app: &WordApp, id: &str) -> String {
+pub fn shortcut_text(app: &GoharScribeApp, id: &str) -> String {
     let Some(spec) = app.session.registry.get(id) else { return String::new() };
     let sc = spec.shortcut.split(" / ").next().unwrap_or("");
     if sc.is_empty() {
@@ -24,7 +24,7 @@ pub fn shortcut_text(app: &WordApp, id: &str) -> String {
     }
 }
 
-fn tooltip(app: &WordApp, resp: Response, label: &str, id: &str) -> Response {
+fn tooltip(app: &GoharScribeApp, resp: Response, label: &str, id: &str) -> Response {
     let sc = shortcut_text(app, id);
     let desc = app.session.registry.get(id).map(|s| s.location).unwrap_or("");
     let enabled = app.session.registry.get(id).map(|s| (s.enabled)(&app.session).is_none()).unwrap_or(true);
@@ -45,7 +45,7 @@ fn tooltip(app: &WordApp, resp: Response, label: &str, id: &str) -> Response {
 }
 
 /// Whether a command exists and is enabled.
-pub fn enabled(app: &WordApp, id: &str) -> bool {
+pub fn enabled(app: &GoharScribeApp, id: &str) -> bool {
     match app.session.registry.get(id) {
         Some(s) => (s.enabled)(&app.session).is_none(),
         None => id.starts_with("ui."),
@@ -69,7 +69,7 @@ fn bg(ui: &Ui, r: Rect, resp: &Response, checked: bool, t: &Tokens) {
 }
 
 /// A large ribbon button: 32 px icon over a (possibly two-line) label.
-pub fn big(ui: &mut Ui, app: &mut WordApp, icon: &str, label: &str, id: &str, params: Value, menu: bool) -> Response {
+pub fn big(ui: &mut Ui, app: &mut GoharScribeApp, icon: &str, label: &str, id: &str, params: Value, menu: bool) -> Response {
     let t = Tokens::get(ui.ctx());
     let galley_w =
         label.split('\n').map(|l| ui.ctx().fonts_mut(|f| f.layout_no_wrap(l.to_string(), regular(11.5), t.text).size().x)).fold(0.0, f32::max);
@@ -95,7 +95,7 @@ pub fn big(ui: &mut Ui, app: &mut WordApp, icon: &str, label: &str, id: &str, pa
 }
 
 /// A small button: 16 px icon with an optional label; `checked` draws the toggled state.
-pub fn small(ui: &mut Ui, app: &mut WordApp, icon: &str, label: Option<&str>, tip: &str, id: &str, params: Value, checked: bool) -> Response {
+pub fn small(ui: &mut Ui, app: &mut GoharScribeApp, icon: &str, label: Option<&str>, tip: &str, id: &str, params: Value, checked: bool) -> Response {
     let t = Tokens::get(ui.ctx());
     let text_w = label.map(|l| ui.ctx().fonts_mut(|f| f.layout_no_wrap(l.to_string(), regular(11.5), t.text).size().x) + 6.0).unwrap_or(0.0);
     let (r, resp) = ui.allocate_exact_size(vec2(24.0 + text_w, 22.0), Sense::click());
@@ -117,14 +117,14 @@ pub fn small(ui: &mut Ui, app: &mut WordApp, icon: &str, label: Option<&str>, ti
 /// A split button: the left part runs `id`, the arrow opens a menu filled by `menu`.
 pub fn split(
     ui: &mut Ui,
-    app: &mut WordApp,
+    app: &mut GoharScribeApp,
     icon: &str,
     tip: &str,
     id: &str,
     params: Value,
     checked: bool,
     swatch: Option<Color32>,
-    menu: impl FnOnce(&mut Ui, &mut WordApp),
+    menu: impl FnOnce(&mut Ui, &mut GoharScribeApp),
 ) {
     let t = Tokens::get(ui.ctx());
     let (r, resp) = ui.allocate_exact_size(vec2(24.0, 22.0), Sense::click());
@@ -150,12 +150,12 @@ pub fn split(
 /// A button that only opens a menu (icon + label + ▾).
 pub fn menu_button(
     ui: &mut Ui,
-    app: &mut WordApp,
+    app: &mut GoharScribeApp,
     icon: &str,
     label: Option<&str>,
     tip: &str,
     big_btn: bool,
-    menu: impl FnOnce(&mut Ui, &mut WordApp),
+    menu: impl FnOnce(&mut Ui, &mut GoharScribeApp),
 ) {
     let t = Tokens::get(ui.ctx());
     let resp = if big_btn {
@@ -195,7 +195,7 @@ pub fn menu_button(
 }
 
 /// A ribbon group: content, a centred label below and a divider on the right.
-pub fn group(ui: &mut Ui, title: &str, launcher: Option<&str>, app: &mut WordApp, add: impl FnOnce(&mut Ui, &mut WordApp)) {
+pub fn group(ui: &mut Ui, title: &str, launcher: Option<&str>, app: &mut GoharScribeApp, add: impl FnOnce(&mut Ui, &mut GoharScribeApp)) {
     let t = Tokens::get(ui.ctx());
     let label_w = ui.ctx().fonts_mut(|f| f.layout_no_wrap(title.to_string(), regular(11.0), t.group_label).size().x);
     let start = ui.cursor().min;

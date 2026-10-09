@@ -11,9 +11,9 @@
 mod control_server;
 
 use goharscribe_engine::Session;
-use goharscribe_ui_egui::{Services, UiState, WordApp};
+use goharscribe_ui_egui::{GoharScribeApp, Services, UiState};
 
-struct App(WordApp);
+struct App(GoharScribeApp);
 
 impl eframe::App for App {
     fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
@@ -47,7 +47,7 @@ fn prefs_path() -> Option<std::path::PathBuf> {
     base.map(|b| b.join("ui.json"))
 }
 
-fn load_prefs(app: &mut WordApp) {
+fn load_prefs(app: &mut GoharScribeApp) {
     if std::env::var_os("GOHARSCRIBE_NO_PREFS").is_some() {
         return;
     }
@@ -60,7 +60,7 @@ fn load_prefs(app: &mut WordApp) {
     }
 }
 
-fn save_prefs(app: &WordApp) {
+fn save_prefs(app: &GoharScribeApp) {
     if std::env::var_os("GOHARSCRIBE_NO_PREFS").is_some() {
         return;
     }
@@ -141,7 +141,7 @@ fn main() -> eframe::Result {
         options,
         Box::new(move |cc| {
             let doc = if sample { goharscribe_engine::sample::sample_document() } else { goharscribe_doc::Document::new() };
-            let mut app = WordApp::new(Session::new(doc), services());
+            let mut app = GoharScribeApp::new(Session::new(doc), services());
             load_prefs(&mut app);
             app.integrated_titlebar = cfg!(target_os = "macos");
             if let Some(port) = control_port {

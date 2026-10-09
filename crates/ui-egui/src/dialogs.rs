@@ -6,7 +6,7 @@ use egui::{Sense, Ui, vec2};
 use serde::Serialize;
 use serde_json::{Value, json};
 
-use crate::WordApp;
+use crate::GoharScribeApp;
 use crate::theme::{Tokens, semibold};
 
 #[derive(Clone, Debug, Serialize)]
@@ -126,7 +126,7 @@ impl Dialog {
         }
     }
 
-    pub fn open(name: &str, app: &mut WordApp) -> Option<Dialog> {
+    pub fn open(name: &str, app: &mut GoharScribeApp) -> Option<Dialog> {
         let st = app.session.run("format.state", &json!({})).unwrap_or_default();
         let s = |k: &str| st.get(k).and_then(Value::as_str).unwrap_or("").to_string();
         let b = |k: &str| st.get(k).and_then(Value::as_bool).unwrap_or(false);
@@ -202,7 +202,7 @@ impl Dialog {
         })
     }
 
-    pub fn modify_style(app: &WordApp, id: &str) -> Option<Dialog> {
+    pub fn modify_style(app: &GoharScribeApp, id: &str) -> Option<Dialog> {
         let st = app.session.doc.styles.get(id)?;
         let rc = app.session.doc.styles.resolve_char(
             if st.kind == goharscribe_doc::StyleKind::Paragraph { Some(id) } else { None },
@@ -230,7 +230,7 @@ impl Dialog {
 }
 
 /// Grid picker for Insert › Table (hover to size, click to insert).
-pub fn table_grid_picker(ui: &mut Ui, app: &mut WordApp) {
+pub fn table_grid_picker(ui: &mut Ui, app: &mut GoharScribeApp) {
     let t = Tokens::get(ui.ctx());
     let id = egui::Id::new("table_picker_hover");
     let hover: (usize, usize) = ui.data(|d| d.get_temp(id)).unwrap_or((0, 0));
@@ -266,7 +266,7 @@ pub fn table_grid_picker(ui: &mut Ui, app: &mut WordApp) {
     }
 }
 
-pub fn show(app: &mut WordApp, ctx: &egui::Context) {
+pub fn show(app: &mut GoharScribeApp, ctx: &egui::Context) {
     let Some(mut d) = app.dialog.take() else { return };
     let mut open = true;
     let mut close = false;
@@ -320,7 +320,7 @@ fn buttons(ui: &mut Ui, ok: &str) -> (bool, bool) {
 }
 
 /// Returns true to close.
-fn body(app: &mut WordApp, ui: &mut Ui, d: &mut Dialog) -> bool {
+fn body(app: &mut GoharScribeApp, ui: &mut Ui, d: &mut Dialog) -> bool {
     match d {
         Dialog::Font { font, size, bold, italic, underline, strike, sup, sub, small_caps, caps, hidden, color, spacing } => {
             egui::Grid::new("fontdlg").num_columns(2).spacing(vec2(10.0, 6.0)).show(ui, |ui| {
