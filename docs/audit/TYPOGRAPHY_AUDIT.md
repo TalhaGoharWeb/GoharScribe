@@ -17,22 +17,23 @@ Verified:
 
 The shaping itself is correct. The problem is WHAT ORDER the text is fed to the shaper.
 
-## Bidirectional Algorithm: BROKEN (BIDI-1)
+## Bidirectional Algorithm: FIXED (BIDI-1) — 2026-10-09
 
-**File:** `crates/fonts/src/lib.rs:87-111`
+**File:** `crates/fonts/src/lib.rs`
 
-### Current Implementation
+### Fix Applied
 
-```rust
-fn direction_runs(text: &str) -> Vec<(Range<usize>, bool)> {
-    // Only splits on strong R/AL vs L. No UAX #9.
-}
-```
+Replaced the simplistic `direction_runs()` (which only split on strong R/AL vs L) with a proper UAX #9 implementation using the `unicode-bidi 0.3.18` crate:
 
-### What's Wrong
+1. **Embedding levels** — Uses `BidiInfo::new()` to compute proper levels 0-125
+2. **Number handling** — EN/AN handled per UAX #9 via unicode-bidi
+3. **Visual reordering** — `shape()` now outputs glyphs in visual (display) order, not logical order
+4. **Tests** — Added 3 regression tests: `bidi_mixed_text_uses_proper_levels`, `bidi_pure_ltr_has_single_level`, `bidi_pure_rtl_has_single_level`
 
-1. **No embedding levels** — UAX #9 requires computing levels 0-125
-2. **No number handling** — EN (European Number) and AN (Arabic Number) have special rules
+### Verification
+
+- 20/20 font tests pass (17 existing + 3 new)
+- Clippy clean with `-D warnings`
 3. **No neutral resolution** — punctuation between LTR/RTL follows complex rules (W1-W7, N0-N2)
 4. **No visual reordering** — layout renders in logical order, not visual
 
