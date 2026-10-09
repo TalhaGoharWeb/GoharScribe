@@ -276,7 +276,7 @@ fn resolve_all(s: &mut Session, accept: bool) -> CmdResult {
                 // Delete the paragraph block.
                 let parent_path = goharscribe_doc::Path(path.parent().to_vec());
                 if let Ok(blocks) = s.doc.container_mut(st, &parent_path) {
-                    let idx = path.last() as usize;
+                    let idx = path.last();
                     if idx < blocks.len() {
                         blocks.remove(idx);
                         continue;
