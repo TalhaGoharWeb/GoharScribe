@@ -79,7 +79,7 @@ fn paste(s: &mut Session, v: &Value) -> CmdResult {
         (None, Some(f)) => f.clone(),
         (None, None) => return Err(CmdError::Failed("the clipboard is empty".into())),
     };
-    if let Some(images) = v.get("image").and_then(Value::as_str) {
+    if v.get("image").and_then(Value::as_str).is_some() {
         // Image paste via edit.paste is not supported; use insert.picture instead.
         return Err(CmdError::Failed("image paste not supported; use insert.picture".into()));
     }
