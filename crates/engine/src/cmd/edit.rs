@@ -17,14 +17,12 @@ pub fn specs() -> Vec<CommandSpec> {
             s.undo();
             sel_result(s)
         })
-        .key("Mod+Z")
-        .pure(),
+        .key("Mod+Z"),
         CommandSpec::new("edit.redo", "Redo", "Quick Access Toolbar", |s, _| {
             s.redo();
             sel_result(s)
         })
-        .key("Mod+Y / Mod+Shift+Z")
-        .pure(),
+        .key("Mod+Y / Mod+Shift+Z"),
         CommandSpec::new("edit.cut", "Cut", "Home › Clipboard", cut).key("Mod+X").when(has_sel),
         CommandSpec::new("edit.copy", "Copy", "Home › Clipboard", copy).key("Mod+C").pure(),
         CommandSpec::new("edit.paste", "Paste", "Home › Clipboard", paste).key("Mod+V").params(r#"{"text"?: string}"#),
@@ -82,7 +80,8 @@ fn paste(s: &mut Session, v: &Value) -> CmdResult {
         (None, None) => return Err(CmdError::Failed("the clipboard is empty".into())),
     };
     if let Some(images) = v.get("image").and_then(Value::as_str) {
-        let _ = images;
+        // Image paste via edit.paste is not supported; use insert.picture instead.
+        return Err(CmdError::Failed("image paste not supported; use insert.picture".into()));
     }
     let at = delete_selection(s)?;
     let mut frag = frag;

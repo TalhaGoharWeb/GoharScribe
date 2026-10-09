@@ -138,7 +138,6 @@ fn home(app: &mut GoharScribeApp, ui: &mut Ui) {
         menu_button(ui, app, "paste", Some("Paste"), "Paste (⌘V)", true, |ui, app| {
             mi(ui, app, "Paste", "edit.paste", json!({}));
             mi(ui, app, "Keep Text Only", "edit.pasteText", json!({}));
-            mi(ui, app, "Merge Formatting", "edit.pasteMerge", json!({}));
         });
         stack(ui, |ui| {
             small(ui, app, "cut", Some("Cut"), "Cut", "edit.cut", json!({}), false);
