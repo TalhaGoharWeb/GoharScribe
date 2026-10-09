@@ -46,6 +46,20 @@ pub fn specs() -> Vec<CommandSpec> {
         CommandSpec::new("layout.pageSetup", "Page Setup", "Layout › Page Setup", |s, v| {
             if let Some(props) = v.get("section") {
                 let new: SectionProps = serde_json::from_value(props.clone()).map_err(|e| CmdError::Params(e.to_string()))?;
+                // Validate section props (SEC-2: hostile floats via section object bypass).
+                if !(72.0..=1584.0).contains(&new.page_w) || !(72.0..=1584.0).contains(&new.page_h) {
+                    return Err(CmdError::Params("page size must be 1\"–22\"".into()));
+                }
+                for (name, m) in [
+                    ("margin_top", new.margin_top),
+                    ("margin_bottom", new.margin_bottom),
+                    ("margin_left", new.margin_left),
+                    ("margin_right", new.margin_right),
+                ] {
+                    if !m.is_finite() || m < 0.0 || m > 1584.0 {
+                        return Err(CmdError::Params(format!("{name} out of range")));
+                    }
+                }
                 return with_sect(s, |x| *x = new.clone());
             }
             s.ui_requests.push(json!({"open": "pageSetup"}));
