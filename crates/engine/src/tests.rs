@@ -287,3 +287,43 @@ fn caret_navigation() {
     run(&mut s, "caret.left", json!({}));
     assert_eq!(s.sel.focus.off, 10);
 }
+
+#[test]
+fn sec1_para_set_rejects_too_many_tabs() {
+    // SEC-1: para.set must enforce the 64-tab cap like para.tabs does.
+    let mut s = s();
+    run(&mut s, "text.insert", json!({"text": "hello"}));
+    let tabs: Vec<serde_json::Value> = (0..100).map(|i| json!({"pos": i as f64 * 10.0})).collect();
+    let r = s.run("para.set", &json!({"props": {"tabs": tabs}}));
+    assert!(r.is_err(), "para.set should reject >64 tabs");
+}
+
+#[test]
+fn sec2_pagesetup_rejects_hostile_section() {
+    // SEC-2: layout.pageSetup with section object must validate page size.
+    // Note: SectionProps uses camelCase in JSON.
+    let mut s = s();
+    let r = s.run("layout.pageSetup", &json!({"section": {"pageW": 1e20, "pageH": 1e20}}));
+    assert!(r.is_err(), "pageSetup should reject absurd page size");
+    let r = s.run("layout.pageSetup", &json!({"section": {"pageW": 612.0, "pageH": 792.0}}));
+    assert!(r.is_ok(), "valid page size should work");
+}
+
+#[test]
+fn sec3_format_set_rejects_absurd_values() {
+    // SEC-3: format.set must bound font name length and size.
+    let mut s = s();
+    run(&mut s, "text.insert", json!({"text": "hello"}));
+    let big_font = "x".repeat(1000);
+    let r = s.run("format.set", &json!({"props": {"font": big_font}}));
+    assert!(r.is_err(), "format.set should reject 1000-char font name");
+    let r = s.run("format.set", &json!({"props": {"size": 1e20}}));
+    assert!(r.is_err(), "format.set should reject absurd font size");
+}
+
+#[test]
+fn sec4_base64_decode_bounds_input() {
+    // SEC-4: base64_decode must not preallocate on huge input.
+    let big = "A".repeat(300_000_000);
+    assert!(crate::cmd::insert::base64_decode(&big).is_none(), "should reject >280MB input");
+}

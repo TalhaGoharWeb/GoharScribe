@@ -135,6 +135,10 @@ pub fn specs() -> Vec<CommandSpec> {
         }),
         CommandSpec::new("para.set", "Set Paragraph Formatting", "Home › Paragraph › Paragraph", |s, v| {
             let props: ParaProps = serde_json::from_value(v.get("props").cloned().unwrap_or(Value::Null)).map_err(|e| CmdError::Params(e.to_string()))?;
+            // Enforce the same 64-tab cap as para.tabs (SEC-1: bypass via para.set).
+            if props.tabs.as_ref().is_some_and(|t| t.len() > 64) {
+                return Err(CmdError::Params("at most 64 tab stops".into()));
+            }
             fmt(s, &|p| p.overlay(&props))
         })
         .params(r#"{"props": ParaProps}"#),
