@@ -341,7 +341,7 @@ impl Session {
         if spec.mutates && spec.id != "text.insert" {
             self.typing_open = false;
         }
-        if spec.mutates {
+        if spec.mutates && !matches!(id, "edit.undo" | "edit.redo" | "edit.repeat") {
             let label = if spec.id == "text.insert" { "Typing" } else { spec.label };
             self.checkpoint(label);
         } else if !spec.id.starts_with("caret.") && !spec.id.starts_with("view.") && !spec.id.starts_with("select.") {
