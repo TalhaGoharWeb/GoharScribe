@@ -440,12 +440,10 @@ fn sort(s: &mut Session, v: &Value) -> CmdResult {
             p.section = None;
         }
     }
-    if let Some(sb) = section_break {
-        if let Some(last) = slice.last_mut() {
-            let block = std::sync::Arc::make_mut(last);
-            if let Block::Para(p) = block {
-                p.section = Some(sb);
-            }
+    if let Some(sb) = section_break && let Some(last) = slice.last_mut() {
+        let block = std::sync::Arc::make_mut(last);
+        if let Block::Para(p) = block {
+            p.section = Some(sb);
         }
     }
     s.sel = crate::Selection { anchor: Pos { off: 0, ..a }, focus: b };
