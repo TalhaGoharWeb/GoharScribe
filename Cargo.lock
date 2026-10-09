@@ -1638,6 +1638,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "goharscribe-input"
+version = "0.1.0"
+
+[[package]]
 name = "goharscribe-layout"
 version = "0.1.0"
 dependencies = [

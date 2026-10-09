@@ -1,0 +1,11 @@
+[package]
+name = "goharscribe-input"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Urdu phonetic keyboard input and Roman-Urdu transliteration for GoharScribe"
+
+[dependencies]
+
+[lints]
+workspace = true

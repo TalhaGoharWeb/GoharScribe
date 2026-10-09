@@ -58,3 +58,6 @@ Generated-in-code art is original and has no file to list: the UI icon set (`cra
 | `docs/brand/goharscribe-mark.png` | GoharScribe Team | craftrules `assets/brand/` | GoharScribe trademark, `docs/brand/LICENSE-brand.txt` | Not open source; usable unmodified only |
 | `docs/brand/goharscribe-mark.svg` | GoharScribe Team | craftrules `assets/brand/` | GoharScribe trademark, `docs/brand/LICENSE-brand.txt` | Not open source; usable unmodified only |
 | craft-fonts (optional build input, not files in this repo): BIZ UDPGothic, BIZ UDMincho, Shippori Mincho | see https://github.com/storytold/craft-fonts/blob/main/ATTRIBUTION.md | embedded only when built with `CRAFT_FONTS_DIR` (all official releases) | OFL-1.1 | Japanese UI and document fallback |
+
+## Input method design
+- Urdu phonetic keyboard layout and Urdu↔Roman transliteration tables in `crates/input` are adapted from Naseem Amjad's Urdu Nigar (https://github.com/naseem1amjad/urdunigar-rray-version, `Form1.cs`: `setUrduPhoneticUnicodes`, `setUrduUnicode2Roman`). Reimplemented in Rust; no code copied.

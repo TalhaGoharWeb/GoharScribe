@@ -24,6 +24,7 @@ goharscribe-proof = { path = "crates/proof" }
 goharscribe-engine = { path = "crates/engine" }
 goharscribe-mcp = { path = "crates/mcp" }
 goharscribe-ui-egui = { path = "crates/ui-egui" }
+goharscribe-input = { path = "crates/input" }
 
 # foundation
 kurbo = { version = "0.13", features = ["serde"] }
