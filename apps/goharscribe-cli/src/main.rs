@@ -19,7 +19,8 @@ USAGE:
                                               run commands headlessly, then save
   goharscribe-cli commands [--json]             list every command
   goharscribe-cli parity [--markdown]           feature-catalog parity
-  goharscribe-cli mcp [--connect HOST:PORT]     MCP server on stdio (headless, or bridged to the app)
+  goharscribe-cli mcp [--connect HOST:PORT] [--token TOKEN] [--jail DIR]
+                                                 MCP server on stdio (headless, or bridged to the app)
   goharscribe-cli --version
 ";
 
@@ -144,11 +145,19 @@ fn run(args: &[String]) -> Result<(), String> {
         "mcp" => {
             let backend: Box<dyn goharscribe_mcp::Backend> = match arg_value(&rest, "--connect") {
                 Some(addr) => {
-                    Box::new(goharscribe_mcp::Remote::connect(&addr).map_err(|e| format!("can't reach the GoharScribe app at {addr}: {e}"))?)
+                    let token =
+                        arg_value(&rest, "--token").or_else(|| std::env::var("GOHARSCRIBE_CONTROL_TOKEN").ok()).filter(|t| !t.trim().is_empty());
+                    Box::new(
+                        goharscribe_mcp::Remote::connect_with_token(&addr, token)
+                            .map_err(|e| format!("can't reach the GoharScribe app at {addr}: {e}"))?,
+                    )
                 }
                 None => Box::new(goharscribe_mcp::Headless::default()),
             };
-            let mut server = goharscribe_mcp::Server::new(backend);
+            let mut server = match arg_value(&rest, "--jail").or_else(|| std::env::var("GOHARSCRIBE_MCP_JAIL").ok()).map(std::path::PathBuf::from) {
+                Some(jail) => goharscribe_mcp::Server::with_jail(backend, Some(jail)),
+                None => goharscribe_mcp::Server::with_jail(backend, None),
+            };
             let stdin = std::io::stdin();
             server.serve(stdin.lock(), std::io::stdout()).map_err(|e| e.to_string())
         }

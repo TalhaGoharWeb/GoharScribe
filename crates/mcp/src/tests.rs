@@ -67,3 +67,54 @@ fn resources() {
     let r = call(&mut s, 2, "resources/read", json!({"uri": "goharscribe://document"}));
     assert!(r["result"]["contents"][0]["text"].as_str().unwrap().contains("blocks"));
 }
+
+/// Call a tool without asserting success; returns the raw result value.
+fn tool_raw(s: &mut Server, name: &str, args: Value) -> Value {
+    let r = call(s, 9, "tools/call", json!({"name": name, "arguments": args}));
+    r["result"].clone()
+}
+
+#[test]
+fn jail_blocks_paths_outside() {
+    let jail = std::env::temp_dir().join("goharscribe-jail-test");
+    std::fs::create_dir_all(&jail).unwrap();
+    let mut s = crate::Server::with_jail(Box::new(Headless::default()), Some(jail.clone()));
+
+    // Outside the jail: rejected with a jail error, never reaching the backend.
+    let outside = tool_raw(&mut s, "open_document", json!({"path": "/etc/hostname"}));
+    assert_eq!(outside["isError"], true);
+    assert!(outside["content"][0]["text"].as_str().unwrap_or("").contains("outside the allowed directory"));
+
+    // Via the generic execute tool too.
+    let outside2 = tool_raw(&mut s, "execute", json!({"command": "file.open", "params": {"path": "/etc/hostname"}}));
+    assert_eq!(outside2["isError"], true);
+
+    // Inside the jail: passes the jail (the backend then fails on the missing file,
+    // which proves the jail let it through).
+    let inside_path = jail.join("doc.gohar").to_string_lossy().to_string();
+    let inside = tool_raw(&mut s, "open_document", json!({"path": inside_path}));
+    let text = inside["content"][0]["text"].as_str().unwrap_or("");
+    assert!(!text.contains("outside the allowed directory"), "{text}");
+
+    // `..` can't escape.
+    let escape = tool_raw(&mut s, "open_document", json!({"path": jail.join("../escape").to_string_lossy()}));
+    assert_eq!(escape["isError"], true);
+
+    std::fs::remove_dir_all(&jail).ok();
+}
+
+#[test]
+fn jail_allows_unit() {
+    use crate::tools::{PATH_COMMANDS, jail_allows};
+    assert!(PATH_COMMANDS.contains(&"file.open"));
+    let jail = std::env::temp_dir().join("goharscribe-jail-unit");
+    std::fs::create_dir_all(&jail).unwrap();
+    let canon = jail.canonicalize().unwrap();
+    // Inside.
+    assert!(jail_allows(&canon, &canon.join("a.gohar").to_string_lossy()));
+    // Outside.
+    assert!(!jail_allows(&canon, "/etc/hostname"));
+    // `..` escape.
+    assert!(!jail_allows(&canon, &format!("{}/../x", canon.to_string_lossy())));
+    std::fs::remove_dir_all(&jail).ok();
+}

@@ -32,6 +32,9 @@ pub const COMMANDS_URI: &str = "goharscribe://commands";
 pub struct Server {
     backend: Box<dyn Backend>,
     initialized: bool,
+    /// Optional filesystem jail: file commands may only touch paths inside it.
+    /// Canonicalized at construction so `..` and symlinks can't escape.
+    jail: Option<std::path::PathBuf>,
 }
 
 fn response(id: Value, result: Value) -> Value {
@@ -44,7 +47,14 @@ fn error(id: Value, code: i64, message: impl Into<String>) -> Value {
 
 impl Server {
     pub fn new(backend: Box<dyn Backend>) -> Self {
-        Self { backend, initialized: false }
+        Self { backend, initialized: false, jail: None }
+    }
+
+    /// As [`Server::new`], but file commands (`file.open`, `file.save`, …) may
+    /// only touch paths inside `jail`. Also honors `GOHARSCRIBE_MCP_JAIL`.
+    pub fn with_jail(backend: Box<dyn Backend>, jail: Option<std::path::PathBuf>) -> Self {
+        let jail = jail.or_else(|| std::env::var("GOHARSCRIBE_MCP_JAIL").ok().map(std::path::PathBuf::from)).map(|j| j.canonicalize().unwrap_or(j));
+        Self { backend, initialized: false, jail }
     }
 
     pub fn backend(&mut self) -> &mut dyn Backend {
@@ -145,7 +155,7 @@ impl Server {
             "tools/call" => {
                 let name = params.get("name").and_then(Value::as_str).ok_or((INVALID_PARAMS, "missing tool `name`".to_string()))?;
                 let args = params.get("arguments").cloned().unwrap_or(Value::Null);
-                Ok(call_tool(self.backend.as_mut(), name, &args).to_value())
+                Ok(call_tool(self.backend.as_mut(), name, &args, self.jail.as_deref()).to_value())
             }
             "resources/list" => Ok(json!({"resources": [
                 {"uri": DOC_URI, "name": "document", "title": "Active document", "description": "Blocks, text, formatting, sections, parts and selection of the document (document.inspect)", "mimeType": "application/json"},

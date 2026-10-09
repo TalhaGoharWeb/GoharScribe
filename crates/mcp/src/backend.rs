@@ -18,16 +18,26 @@ pub trait Backend {
 }
 
 /// A running GoharScribe app, reached through its loopback control port.
+/// Carries the bearer token the app's control server requires (`--token` or
+/// `GOHARSCRIBE_CONTROL_TOKEN`).
 pub struct Remote {
     addr: String,
+    token: Option<String>,
     conn: Option<(BufReader<TcpStream>, TcpStream)>,
     next_id: u64,
 }
 
 impl Remote {
     /// Connect to `addr` (`127.0.0.1:7981`), failing fast when nothing is listening.
+    /// Uses `GOHARSCRIBE_CONTROL_TOKEN` when set.
     pub fn connect(addr: &str) -> std::io::Result<Self> {
-        let mut r = Self { addr: addr.to_string(), conn: None, next_id: 1 };
+        let token = std::env::var("GOHARSCRIBE_CONTROL_TOKEN").ok().filter(|t| !t.trim().is_empty());
+        Self::connect_with_token(addr, token)
+    }
+
+    /// Connect with an explicit control token.
+    pub fn connect_with_token(addr: &str, token: Option<String>) -> std::io::Result<Self> {
+        let mut r = Self { addr: addr.to_string(), token, conn: None, next_id: 1 };
         r.reconnect()?;
         Ok(r)
     }
@@ -77,7 +87,7 @@ impl Backend for Remote {
     fn call(&mut self, method: &str, params: Value) -> Result<Value, String> {
         let id = self.next_id;
         self.next_id += 1;
-        let line = json!({"id": id, "method": method, "params": params}).to_string();
+        let line = json!({"id": id, "method": method, "params": params, "token": self.token}).to_string();
         // One retry with a fresh connection (the app may have restarted).
         let reply = match self.roundtrip(&line) {
             Ok(r) => r,

@@ -1,5 +1,7 @@
 //! MCP tools: names, schemas and implementations on top of a [`Backend`].
 
+use std::path::Path;
+
 use serde_json::{Value, json};
 
 use crate::backend::Backend;
@@ -157,8 +159,43 @@ fn wrap(r: Result<Value, String>) -> ToolResult {
     }
 }
 
-pub fn call_tool(b: &mut dyn Backend, name: &str, a: &Value) -> ToolResult {
+/// Commands whose `path` parameter touches the filesystem.
+pub(crate) const PATH_COMMANDS: &[&str] =
+    &["file.open", "file.save", "file.saveAs", "file.exportPdf", "file.exportPng", "file.newFromTemplate", "file.saveTemplate", "file.recover"];
+
+/// Reject a file command whose `path` escapes the jail. No jail → always Ok.
+fn jail_check(jail: Option<&Path>, command: &str, params: &Value) -> Result<(), String> {
+    let Some(jail) = jail else { return Ok(()) };
+    if !PATH_COMMANDS.contains(&command) {
+        return Ok(());
+    }
+    let Some(path) = params.get("path").and_then(Value::as_str).filter(|p| !p.is_empty()) else {
+        return Ok(()); // e.g. save-in-place: no new path touched
+    };
+    if jail_allows(jail, path) { Ok(()) } else { Err(format!("path `{path}` is outside the allowed directory")) }
+}
+
+/// True when `path` resolves inside `jail`. Relative paths are resolved against
+/// the jail root; `..` and symlinks can't escape (both sides canonicalized).
+pub(crate) fn jail_allows(jail: &Path, path: &str) -> bool {
+    let p = Path::new(path);
+    let abs = if p.is_absolute() { p.to_path_buf() } else { jail.join(p) };
+    let target = if abs.exists() {
+        abs.canonicalize().unwrap_or(abs)
+    } else {
+        // New file: canonicalize the parent, then reattach the file name.
+        match abs.parent().map(|par| par.canonicalize()) {
+            Some(Ok(par)) => par.join(abs.file_name().unwrap_or_default()),
+            _ => abs,
+        }
+    };
+    target.starts_with(jail)
+}
+
+pub fn call_tool(b: &mut dyn Backend, name: &str, a: &Value, jail: Option<&Path>) -> ToolResult {
     let st = |k: &str| a.get(k).and_then(Value::as_str);
+    // Enforce the filesystem jail on every path a tool would touch.
+    let check = |command: &str, params: &Value| -> Result<(), String> { jail_check(jail, command, params) };
     match name {
         "list_commands" => {
             let q = st("query").unwrap_or("").to_lowercase();
@@ -180,7 +217,13 @@ pub fn call_tool(b: &mut dyn Backend, name: &str, a: &Value) -> ToolResult {
             }
         }
         "execute" => match st("command") {
-            Some(c) => wrap(exec(b, c, a.get("params").cloned().unwrap_or(json!({})))),
+            Some(c) => {
+                let params = a.get("params").cloned().unwrap_or(json!({}));
+                if let Err(e) = check(c, &params) {
+                    return ToolResult::error(e);
+                }
+                wrap(exec(b, c, params))
+            }
             None => ToolResult::error("missing `command`"),
         },
         "batch" => {
@@ -188,7 +231,11 @@ pub fn call_tool(b: &mut dyn Backend, name: &str, a: &Value) -> ToolResult {
             let mut out = Vec::new();
             for c in a.get("commands").and_then(Value::as_array).cloned().unwrap_or_default() {
                 let id = c.get("command").and_then(Value::as_str).unwrap_or("");
-                let r = exec(b, id, c.get("params").cloned().unwrap_or(json!({})));
+                let params = c.get("params").cloned().unwrap_or(json!({}));
+                let r = match check(id, &params) {
+                    Err(e) => Err(e),
+                    Ok(()) => exec(b, id, params),
+                };
                 let failed = r.is_err();
                 out.push(match r {
                     Ok(v) => json!({"command": id, "ok": true, "result": v}),
@@ -201,21 +248,31 @@ pub fn call_tool(b: &mut dyn Backend, name: &str, a: &Value) -> ToolResult {
             ToolResult::json(&Value::Array(out))
         }
         "new_document" => wrap(exec(b, "file.new", json!({"template": st("template").unwrap_or("blank")}))),
-        "open_document" => wrap(exec(b, "file.open", json!({"path": st("path").unwrap_or("")}))),
+        "open_document" => {
+            let params = json!({"path": st("path").unwrap_or("")});
+            if let Err(e) = check("file.open", &params) {
+                return ToolResult::error(e);
+            }
+            wrap(exec(b, "file.open", params))
+        }
         "save_document" => {
             let p = st("path");
             let ext = p.and_then(|x| x.rsplit('.').next()).unwrap_or("").to_ascii_lowercase();
             if ext == "png" {
-                wrap(exec(b, "file.exportPng", json!({"path": p})))
+                let params = json!({"path": p});
+                if let Err(e) = check("file.exportPng", &params) {
+                    return ToolResult::error(e);
+                }
+                wrap(exec(b, "file.exportPng", params))
             } else {
-                wrap(exec(
-                    b,
-                    "file.save",
-                    match p {
-                        Some(p) => json!({"path": p}),
-                        None => json!({}),
-                    },
-                ))
+                let params = match p {
+                    Some(p) => json!({"path": p}),
+                    None => json!({}),
+                };
+                if let Err(e) = check("file.save", &params) {
+                    return ToolResult::error(e);
+                }
+                wrap(exec(b, "file.save", params))
             }
         }
         "type_text" => {

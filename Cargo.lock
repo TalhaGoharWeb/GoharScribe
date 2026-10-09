@@ -1538,6 +1538,7 @@ version = "0.1.0"
 dependencies = [
  "eframe",
  "egui",
+ "getrandom 0.3.4",
  "goharscribe-doc",
  "goharscribe-engine",
  "goharscribe-ui-egui",
