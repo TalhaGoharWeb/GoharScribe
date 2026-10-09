@@ -518,6 +518,8 @@ impl Reader<'_> {
         let mut by_para: HashMap<String, u32> = HashMap::new();
         let mut next_id = 0u32;
         let mut entries: BTreeMap<u32, Comment> = BTreeMap::new();
+        // M3: Pre-compute used IDs for O(1) lookup (was O(n²) via .values().any()).
+        let used_ids: std::collections::HashSet<u32> = self.comment_map.values().copied().collect();
         for c in root.children("w:comment") {
             if self.doc.parts.len() >= MAX_PARTS {
                 break;
@@ -527,9 +529,9 @@ impl Reader<'_> {
                 continue;
             }
             let id = match file_id.parse::<u32>() {
-                Ok(v) if !entries.contains_key(&v) => v,
+                Ok(v) if !entries.contains_key(&v) && !used_ids.contains(&v) => v,
                 _ => {
-                    while entries.contains_key(&next_id) || self.comment_map.values().any(|v| *v == next_id) {
+                    while entries.contains_key(&next_id) || used_ids.contains(&next_id) {
                         next_id += 1;
                     }
                     next_id

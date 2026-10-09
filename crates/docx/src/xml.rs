@@ -198,14 +198,15 @@ pub fn parse(bytes: &[u8]) -> Result<El, DocxError> {
                     None => local,
                 };
                 let mut el = El { name, attrs: Vec::new(), kids: Vec::new() };
-                for a in e.attributes().with_checks(false) {
+                // M1: Cap attributes per element (2M attrs → 243MB RSS).
+                for a in e.attributes().with_checks(false).take(1024) {
                     let Ok(a) = a else { continue };
                     let key = a.key;
                     let raw_key = key.as_ref();
                     if raw_key == b"xmlns" || raw_key.starts_with(b"xmlns:") {
                         continue;
                     }
-                    let (ares, alocal) = r.resolve_attribute(key);
+                    let (ares, alocal) = r.resolver().resolve_attribute(key);
                     let alocal = String::from_utf8_lossy(alocal.as_ref()).into_owned();
                     let aname = match ares {
                         ResolveResult::Bound(ns) => format!("{}:{alocal}", prefix_for(ns.as_ref())),

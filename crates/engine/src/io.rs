@@ -43,10 +43,21 @@ pub fn save_bytes(name: &str, doc: &Document) -> Result<Vec<u8>, String> {
 #[cfg(not(target_arch = "wasm32"))]
 pub fn open_path(path: &std::path::Path) -> Result<Document, String> {
     let meta = std::fs::metadata(path).map_err(|e| format!("{}: {e}", path.display()))?;
+    // M9: Reject non-regular files (FIFOs hang, /dev/zero OOMs; metadata.len() is 0 for them).
+    if !meta.is_file() {
+        return Err(format!("{}: not a regular file", path.display()));
+    }
     if meta.len() > 2 << 30 {
         return Err(format!("{}: file is larger than 2 GB", path.display()));
     }
-    let bytes = std::fs::read(path).map_err(|e| format!("{}: {e}", path.display()))?;
+    // Use take() to bound the read (TOCTOU: file could grow between metadata and read).
+    let file = std::fs::File::open(path).map_err(|e| format!("{}: {e}", path.display()))?;
+    let mut bytes = Vec::new();
+    use std::io::Read;
+    file.take((2 << 30) + 1).read_to_end(&mut bytes).map_err(|e| format!("{}: {e}", path.display()))?;
+    if bytes.len() as u64 > 2 << 30 {
+        return Err(format!("{}: file is larger than 2 GB", path.display()));
+    }
     open_bytes(&path.to_string_lossy(), &bytes)
 }
 
@@ -59,8 +70,21 @@ pub fn open_path(path: &std::path::Path) -> Result<Document, String> {
 pub fn save_path(path: &std::path::Path, doc: &Document) -> Result<(), String> {
     let bytes = save_bytes(&path.to_string_lossy(), doc)?;
     // Write atomically: temp file next to the target, then rename.
-    let tmp = path.with_extension(format!("{}.tmp", ext_of(&path.to_string_lossy())));
-    std::fs::write(&tmp, &bytes).map_err(|e| format!("{}: {e}", tmp.display()))?;
+    // M8: Use random suffix + create_new (O_EXCL) to prevent symlink attacks.
+    let tmp = {
+        use std::io::Write;
+        let mut rng = std::collections::hash_map::DefaultHasher::new();
+        use std::hash::{Hash, Hasher};
+        std::time::SystemTime::now().hash(&mut rng);
+        std::process::id().hash(&mut rng);
+        let suffix = format!("{:x}", rng.finish());
+        path.with_extension(format!("{}.tmp.{}", ext_of(&path.to_string_lossy()), suffix))
+    };
+    // create_new(true) = O_EXCL: fails if file exists (prevents symlink following).
+    let mut f = std::fs::OpenOptions::new().write(true).create_new(true).open(&tmp).map_err(|e| format!("{}: {e}", tmp.display()))?;
+    use std::io::Write;
+    f.write_all(&bytes).map_err(|e| format!("{}: {e}", tmp.display()))?;
+    drop(f);
     std::fs::rename(&tmp, path).map_err(|e| format!("{}: {e}", path.display()))
 }
 

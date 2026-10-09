@@ -188,6 +188,10 @@ fn delimiter_row(l: &str) -> Option<Vec<Option<Align>>> {
         return None;
     }
     let cells = split_row(l);
+    // H4: Cap columns to prevent M×N allocation blowup (2000 cols × 2000 rows = 4M cells).
+    if cells.len() > 64 {
+        return None;
+    }
     let mut out = Vec::new();
     for c in cells {
         let c = c.trim();
@@ -547,7 +551,10 @@ fn matching_bracket(s: &str, open: usize) -> Option<usize> {
     let b = s.as_bytes();
     let mut depth = 0usize;
     let mut i = open;
-    while let Some(&c) = b.get(i) {
+    // H5: Bound the scan to prevent O(N²) on unclosed `[` (40k `[` → 4.5s).
+    let limit = (open + 10_000).min(b.len());
+    while i < limit {
+        let c = b[i];
         match c {
             b'\\' => i += 1,
             b'`' => {

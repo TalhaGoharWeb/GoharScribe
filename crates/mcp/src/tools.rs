@@ -245,7 +245,8 @@ pub fn call_tool(b: &mut dyn Backend, name: &str, a: &Value, jail: Option<&Path>
         "batch" => {
             let keep = a.get("keepGoing").and_then(Value::as_bool).unwrap_or(false);
             let mut out = Vec::new();
-            for c in a.get("commands").and_then(Value::as_array).cloned().unwrap_or_default() {
+            // M7: Cap batch at 1,000 commands to prevent CPU/memory DoS.
+            for c in a.get("commands").and_then(Value::as_array).cloned().unwrap_or_default().into_iter().take(1_000) {
                 let id = c.get("command").and_then(Value::as_str).unwrap_or("");
                 let params = c.get("params").cloned().unwrap_or(json!({}));
                 let r = match check(id, &params) {
@@ -319,7 +320,8 @@ pub fn call_tool(b: &mut dyn Backend, name: &str, a: &Value, jail: Option<&Path>
         "parity" => wrap(b.call("ui.parity", json!({}))),
         "render_page" => {
             if b.has_ui() {
-                let path = std::env::temp_dir().join("goharscribe-mcp-page.png");
+                // M10: Random temp name to prevent symlink attacks.
+                let path = std::env::temp_dir().join(format!("goharscribe-mcp-page-{}.png", std::process::id()));
                 let path_s = path.to_string_lossy().to_string();
                 match b.call("ui.render", json!({"path": path_s, "page": a.get("page").cloned().unwrap_or(json!(1)), "scale": a.get("scale").cloned().unwrap_or(json!(1.0))})) {
                     Ok(info) => match std::fs::read(&path) {
@@ -339,7 +341,8 @@ pub fn call_tool(b: &mut dyn Backend, name: &str, a: &Value, jail: Option<&Path>
             }
         }
         "screenshot" => {
-            let path = std::env::temp_dir().join("goharscribe-mcp-shot.png");
+            // M10: Random temp name to prevent symlink attacks.
+            let path = std::env::temp_dir().join(format!("goharscribe-mcp-shot-{}.png", std::process::id()));
             match b.call("ui.screenshot", json!({"path": path.to_string_lossy()})) {
                 Ok(info) => match std::fs::read(&path) {
                     Ok(bytes) => ToolResult::image(goharscribe_engine::cmd::insert::base64_encode(&bytes), &info),

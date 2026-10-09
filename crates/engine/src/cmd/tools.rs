@@ -433,7 +433,8 @@ fn macros(s: &mut Session, v: &Value) -> CmdResult {
     }
     if let Some(n) = p::str(v, "run") {
         let steps = s.macros.get(n).cloned().ok_or_else(|| CmdError::Params(format!("no macro `{n}`")))?;
-        for (id, params) in steps.iter().take(10_000) {
+        // M6: Cap at 1,000 steps (was 10,000; each step clones the doc twice).
+        for (id, params) in steps.iter().take(1_000) {
             if id == "tools.macros" {
                 continue;
             }
