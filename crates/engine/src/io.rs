@@ -72,7 +72,6 @@ pub fn save_path(path: &std::path::Path, doc: &Document) -> Result<(), String> {
     // Write atomically: temp file next to the target, then rename.
     // M8: Use random suffix + create_new (O_EXCL) to prevent symlink attacks.
     let tmp = {
-        use std::io::Write;
         let mut rng = std::collections::hash_map::DefaultHasher::new();
         use std::hash::{Hash, Hasher};
         std::time::SystemTime::now().hash(&mut rng);

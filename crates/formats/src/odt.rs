@@ -653,7 +653,10 @@ fn attrs_of(e: &BytesStart<'_>) -> Attrs {
     let mut v = Vec::new();
     for a in e.attributes().with_checks(false).flatten().take(128) {
         let k = String::from_utf8_lossy(a.key.as_ref()).into_owned();
-        let val = a.unescape_value().map(|c| c.into_owned()).unwrap_or_else(|_| String::from_utf8_lossy(&a.value).into_owned());
+        let val = a
+            .normalized_value(quick_xml::XmlVersion::Explicit1_0)
+            .map(|c| c.into_owned())
+            .unwrap_or_else(|_| String::from_utf8_lossy(&a.value).into_owned());
         v.push((k, val));
     }
     v

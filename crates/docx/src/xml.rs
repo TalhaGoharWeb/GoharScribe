@@ -212,7 +212,7 @@ pub fn parse(bytes: &[u8]) -> Result<El, DocxError> {
                         ResolveResult::Bound(ns) => format!("{}:{alocal}", prefix_for(ns.as_ref())),
                         _ => alocal,
                     };
-                    let val = match a.unescape_value() {
+                    let val = match a.normalized_value(quick_xml::XmlVersion::Explicit1_0) {
                         Ok(v) => v.into_owned(),
                         Err(_) => String::from_utf8_lossy(&a.value).into_owned(),
                     };
