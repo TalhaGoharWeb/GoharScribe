@@ -83,49 +83,55 @@ pub fn is_rtl(c: char) -> bool {
     matches!(unicode_bidi::bidi_class(c), R | AL)
 }
 
-/// Maximal runs of one direction (neutrals join the run they're in): (byte range, right-to-left).
-fn direction_runs(text: &str) -> Vec<(std::ops::Range<usize>, bool)> {
-    let mut runs: Vec<(std::ops::Range<usize>, bool)> = Vec::new();
-    let mut cur: Option<bool> = None;
-    let mut start = 0;
-    for (i, c) in text.char_indices() {
-        let strong = if is_rtl(c) {
-            Some(true)
-        } else if unicode_bidi::bidi_class(c) == unicode_bidi::BidiClass::L {
-            Some(false)
-        } else {
-            None
-        };
-        match (cur, strong) {
-            (None, Some(d)) => cur = Some(d),
-            (Some(a), Some(d)) if a != d => {
-                runs.push((start..i, a));
-                start = i;
-                cur = Some(d);
-            }
-            _ => {}
+/// Maximal runs of one embedding level (UAX #9): (byte range, level). Odd levels are RTL.
+/// Uses the `unicode-bidi` crate for proper bidi algorithm implementation, handling
+/// neutrals, numbers, and embeddings correctly.
+fn direction_runs(text: &str) -> Vec<(std::ops::Range<usize>, u8)> {
+    use unicode_bidi::BidiInfo;
+    if text.is_empty() {
+        return Vec::new();
+    }
+    let info = BidiInfo::new(text, None);
+    let mut runs: Vec<(std::ops::Range<usize>, u8)> = Vec::new();
+    // BidiInfo::new processes the text as a single paragraph by default
+    let para = &info.paragraphs[0];
+    let line = para.range.clone();
+    let levels = info.reordered_levels(para, line.clone());
+    // Group consecutive characters with the same level
+    let mut start = line.start;
+    let mut cur_level = levels[0].number();
+    for (i, _) in text[line.clone()].char_indices() {
+        let abs_pos = line.start + i;
+        let level = levels[abs_pos - line.start].number();
+        if level != cur_level {
+            runs.push((start..abs_pos, cur_level));
+            start = abs_pos;
+            cur_level = level;
         }
     }
-    runs.push((start..text.len(), cur.unwrap_or(false)));
+    runs.push((start..line.end, cur_level));
     runs
 }
 
 /// Shape `text` with `face`. `chars` lets callers substitute characters (e.g. uppercase for All
-/// Caps) while keeping clusters pointing into the original string. Glyphs come in logical
-/// order: right-to-left runs are shaped right to left, then their clusters put back in text
-/// order (each cluster's glyphs keep the shaper's order); line layout reorders them visually.
+/// Caps) while keeping clusters pointing into the original string. Glyphs come in VISUAL order
+/// (left-to-right as displayed), following UAX #9 via the `unicode-bidi` crate.
 pub fn shape(face: &FontFace, text: &str, features: &[Feature], map: impl Fn(char) -> char) -> Vec<ShapedGlyph> {
     if !text.chars().any(is_rtl) {
         return shape_dir(face, text, features, &map, false);
     }
-    let mut out = Vec::with_capacity(text.len());
-    for (r, rtl) in direction_runs(text) {
+    let runs = direction_runs(text);
+    // Shape each run, keeping track of original run index for visual reordering
+    let mut shaped_runs: Vec<(usize, u8, Vec<ShapedGlyph>)> = Vec::new();
+    for (idx, (r, level)) in runs.iter().enumerate() {
+        let rtl = level % 2 == 1;
         let mut g = shape_dir(face, &text[r.clone()], features, &map, rtl);
         for x in &mut g {
             x.cluster += r.start;
         }
         if rtl {
-            // Visual (clusters descending) → logical, cluster by cluster.
+            // Reverse glyph order within RTL run for visual display.
+            // Group by cluster (grapheme), then reverse group order.
             let mut groups: Vec<Vec<ShapedGlyph>> = Vec::new();
             for x in g {
                 match groups.last_mut() {
@@ -133,10 +139,36 @@ pub fn shape(face: &FontFace, text: &str, features: &[Feature], map: impl Fn(cha
                     _ => groups.push(vec![x]),
                 }
             }
-            groups.sort_by_key(|grp| grp[0].cluster);
+            groups.reverse();
             g = groups.into_iter().flatten().collect();
         }
-        out.extend(g);
+        shaped_runs.push((idx, *level, g));
+    }
+    // UAX #9 visual reordering: from highest level to lowest, reverse consecutive runs
+    // at that level. Simplified: for each level descending, reverse the order of runs
+    // that are at exactly that level.
+    let max_level = runs.iter().map(|(_, l)| *l).max().unwrap_or(0);
+    let mut order: Vec<usize> = (0..shaped_runs.len()).collect();
+    for level in (1..=max_level).rev() {
+        // Find sequences of runs at >= level and reverse them
+        let mut i = 0;
+        while i < order.len() {
+            if shaped_runs[order[i]].1 >= level {
+                let mut j = i;
+                while j < order.len() && shaped_runs[order[j]].1 >= level {
+                    j += 1;
+                }
+                order[i..j].reverse();
+                i = j;
+            } else {
+                i += 1;
+            }
+        }
+    }
+    // Output in visual order
+    let mut out = Vec::with_capacity(text.len());
+    for idx in order {
+        out.extend(std::mem::take(&mut shaped_runs[idx].2));
     }
     out
 }
@@ -202,6 +234,31 @@ mod tests {
         for s in ["Regular", "Italic", "Bold", "Semibold"] {
             assert!(styles.iter().any(|x| x == s), "{s} in {styles:?}");
         }
+    }
+
+    #[test]
+    fn bidi_mixed_text_uses_proper_levels() {
+        // "اردو 123 English" — numbers should stay with the RTL run per UAX #9
+        let runs = direction_runs("اردو 123 English");
+        // Should have at least 2 runs: RTL (اردو 123) and LTR (English)
+        // The exact split depends on UAX #9 number handling
+        assert!(runs.len() >= 2, "runs: {runs:?}");
+        // First run should be RTL (level 1)
+        assert_eq!(runs[0].1 % 2, 1, "first run should be RTL: {runs:?}");
+    }
+
+    #[test]
+    fn bidi_pure_ltr_has_single_level() {
+        let runs = direction_runs("Hello World");
+        assert_eq!(runs.len(), 1);
+        assert_eq!(runs[0].1, 0);
+    }
+
+    #[test]
+    fn bidi_pure_rtl_has_single_level() {
+        let runs = direction_runs("اردو");
+        assert_eq!(runs.len(), 1);
+        assert_eq!(runs[0].1 % 2, 1);
     }
 
     #[test]
