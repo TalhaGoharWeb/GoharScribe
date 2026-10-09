@@ -270,19 +270,6 @@ fn resolve_all(s: &mut Session, accept: bool) -> CmdResult {
     let stories: Vec<StoryRef> = std::iter::once(StoryRef::Body).chain(s.doc.parts.keys().map(|k| StoryRef::Part(*k))).collect();
     for st in stories {
         for path in s.doc.para_paths(st).into_iter().rev() {
-            // M-3: If rejecting and the entire paragraph was inserted (tracked), delete it.
-            let is_inserted_para = !accept && s.doc.para(st, &path).map(|p| p.mark.ins.is_some()).unwrap_or(false);
-            if is_inserted_para {
-                // Delete the paragraph block.
-                let parent_path = goharscribe_doc::Path(path.parent().to_vec());
-                if let Ok(blocks) = s.doc.container_mut(st, &parent_path) {
-                    let idx = path.last();
-                    if idx < blocks.len() {
-                        blocks.remove(idx);
-                        continue;
-                    }
-                }
-            }
             let len = s.doc.para(st, &path).map(|p| p.len()).unwrap_or(0);
             resolve_para(s, st, &path, 0, len, accept)?;
         }

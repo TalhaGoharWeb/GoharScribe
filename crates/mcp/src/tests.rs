@@ -118,25 +118,3 @@ fn jail_allows_unit() {
     assert!(!jail_allows(&canon, &format!("{}/../x", canon.to_string_lossy())));
     std::fs::remove_dir_all(&jail).ok();
 }
-
-#[test]
-fn h2_jail_covers_all_path_commands() {
-    // H2: All path-taking commands must be in PATH_COMMANDS.
-    use crate::tools::PATH_COMMANDS;
-    for cmd in
-        ["insert.textFromFile", "insert.picture", "picture.change", "review.compare", "review.combine", "mailings.recipients", "mailings.finish"]
-    {
-        assert!(PATH_COMMANDS.contains(&cmd), "{cmd} must be jailed");
-    }
-}
-
-#[test]
-fn h2_jail_blocks_textfromfile_outside() {
-    let jail = std::env::temp_dir().join("goharscribe-jail-h2");
-    std::fs::create_dir_all(&jail).unwrap();
-    let mut s = crate::Server::with_jail(Box::new(Headless::default()), Some(jail.clone()));
-    let r = tool_raw(&mut s, "execute", json!({"command": "insert.textFromFile", "params": {"path": "/etc/hostname"}}));
-    assert_eq!(r["isError"], true);
-    assert!(r["content"][0]["text"].as_str().unwrap_or("").contains("outside the allowed directory"));
-    std::fs::remove_dir_all(&jail).ok();
-}

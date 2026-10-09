@@ -150,11 +150,6 @@ fn table(s: &mut Session, v: &Value) -> CmdResult {
 
 /// Minimal base64 (standard alphabet, padding optional, whitespace ignored).
 pub fn base64_decode(s: &str) -> Option<Vec<u8>> {
-    // Bound the input BEFORE allocating (SEC-4: 60MB input -> 45MB prealloc).
-    // 200MB decoded = ~267MB base64.
-    if s.len() > 280_000_000 {
-        return None;
-    }
     let mut out = Vec::with_capacity(s.len() * 3 / 4);
     let mut buf = 0u32;
     let mut n = 0;

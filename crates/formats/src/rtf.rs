@@ -487,8 +487,6 @@ struct St {
     align: Option<Align>,
     style: i32,
     intbl: bool,
-    /// Nesting level for tables (\\itapN, F-3). 0 = not in table, 1 = outer table.
-    itap: u32,
     ls: Option<i32>,
     ilvl: u8,
     outline: Option<u8>,
@@ -506,7 +504,6 @@ impl Default for St {
             align: None,
             style: 0,
             intbl: false,
-            itap: 0,
             ls: None,
             ilvl: 0,
             outline: None,
@@ -807,8 +804,7 @@ impl Reader {
             }
         }
         self.para_has = false;
-        // F-3: Skip nested table content (itap>1) to avoid polluting outer table.
-        if (self.st.intbl && self.st.itap <= 1) || in_cell {
+        if self.st.intbl || in_cell {
             self.cell.push(FBlock::Para(p));
         } else {
             self.close_table();
@@ -1138,9 +1134,6 @@ impl Reader {
             "outlinelevel" => self.st.outline = Some(pv.clamp(0, 9) as u8),
             "pagebb" => self.st.pagebb = on,
             "intbl" => self.st.intbl = true,
-            // F-3: Track table nesting level. Content at itap>1 is a nested table;
-            // we skip it to avoid polluting the outer table (exporter flattens anyway).
-            "itap" => self.st.itap = pv.clamp(0, 10) as u32,
             "ls" => self.st.ls = Some(pv),
             "ilvl" => self.st.ilvl = pv.clamp(0, 8) as u8,
             "brdrb" => self.rule_pending = true,

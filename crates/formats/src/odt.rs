@@ -895,8 +895,6 @@ struct TableB {
     row: Vec<Cell>,
     /// Covered cells still owed to the previous cell's column span.
     hcover: usize,
-    /// Repeat count for table:number-rows-repeated (F-2).
-    row_repeated: u32,
 }
 
 struct Body<'a> {
@@ -913,8 +911,6 @@ struct Body<'a> {
     lists_saved: Vec<(Vec<(Option<String>, bool)>, Vec<bool>)>,
     tables: Vec<TableB>,
     cells: Vec<Cell>,
-    /// Repeat counts for table:number-columns-repeated (F-1).
-    cell_repeated: Vec<u32>,
     in_text: bool,
     skip: usize,
     depth: usize,
@@ -1133,28 +1129,23 @@ impl Body<'_> {
                     self.skip = 1;
                     return;
                 }
-                self.tables.push(TableB { rows: Vec::new(), row: Vec::new(), hcover: 0, row_repeated: 1 });
+                self.tables.push(TableB { rows: Vec::new(), row: Vec::new(), hcover: 0 });
             }
             "table-row" => {
                 if let Some(t) = self.tables.last_mut() {
                     t.row.clear();
                     t.hcover = 0;
-                    // F-2: Track table:number-rows-repeated.
-                    t.row_repeated = get(a, "table:number-rows-repeated").and_then(|v| v.parse::<u32>().ok()).unwrap_or(1).clamp(1, 1000);
                 }
             }
             "table-cell" => {
                 self.end_para();
                 let span = get(a, "table:number-columns-spanned").and_then(|v| v.parse::<u32>().ok()).unwrap_or(1).clamp(1, 63);
                 let rows = get(a, "table:number-rows-spanned").and_then(|v| v.parse::<u32>().ok()).unwrap_or(1).clamp(1, 1000);
-                // F-1: Track table:number-columns-repeated for expansion at end tag.
-                let repeated = get(a, "table:number-columns-repeated").and_then(|v| v.parse::<u32>().ok()).unwrap_or(1).clamp(1, 63);
                 let shading = get(a, "table:style-name").and_then(|s| self.styles.map.get(s)).and_then(|s| s.fmt.background);
                 if let Some(t) = self.tables.last_mut() {
                     t.hcover = span as usize - 1;
                 }
                 self.cells.push(Cell { colspan: span, rowspan: rows, shading, ..Default::default() });
-                self.cell_repeated.push(repeated);
                 self.containers.push(Vec::new());
                 self.lists_saved.push((std::mem::take(&mut self.lists), std::mem::take(&mut self.item_used)));
             }
@@ -1223,32 +1214,18 @@ impl Body<'_> {
                 let blocks = if self.containers.len() > 1 { self.containers.pop().unwrap_or_default() } else { Vec::new() };
                 (self.lists, self.item_used) = self.lists_saved.pop().unwrap_or_default();
                 let mut cell = self.cells.pop().unwrap_or_default();
-                let repeated = self.cell_repeated.pop().unwrap_or(1);
                 cell.blocks = blocks;
                 if let Some(t) = self.tables.last_mut()
                     && t.row.len() < 63
                 {
                     t.row.push(cell);
-                    // F-1: Expand repeated cells (empty cells collapsed by LibreOffice).
-                    for _ in 1..repeated {
-                        if t.row.len() < 63 {
-                            t.row.push(Cell::default());
-                        }
-                    }
                 }
             }
             "table-row" => {
                 if let Some(t) = self.tables.last_mut() {
                     let r = std::mem::take(&mut t.row);
-                    let repeated = std::mem::replace(&mut t.row_repeated, 1);
                     if !r.is_empty() && t.rows.len() < goharscribe_doc::table::MAX_ROWS {
-                        t.rows.push(r.clone());
-                        // F-2: Expand repeated rows.
-                        for _ in 1..repeated {
-                            if t.rows.len() < goharscribe_doc::table::MAX_ROWS {
-                                t.rows.push(r.clone());
-                            }
-                        }
+                        t.rows.push(r);
                     }
                 }
             }
@@ -1358,7 +1335,6 @@ pub fn parse(bytes: &[u8]) -> Result<Flow, String> {
         item_used: Vec::new(),
         tables: Vec::new(),
         cells: Vec::new(),
-        cell_repeated: Vec::new(),
         in_text: false,
         skip: 0,
         depth: 0,

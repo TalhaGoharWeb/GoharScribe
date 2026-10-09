@@ -375,13 +375,10 @@ fn adjust(s: &mut Session, f: impl Fn(image::DynamicImage) -> image::DynamicImag
     let (_, o) = selected(s).ok_or_else(|| CmdError::Disabled("no picture".into()))?;
     let InlineObject::Image { media, .. } = o else { return Err(CmdError::Disabled("not a picture".into())) };
     let bytes = s.doc.media.get(&media).cloned().ok_or_else(|| CmdError::Failed("picture data missing".into()))?;
-    // H3: Check dimensions BEFORE decoding (a hostile image can force multi-GB allocation).
-    let (dw, dh) =
-        image::ImageReader::new(std::io::Cursor::new(&bytes[..])).with_guessed_format().ok().and_then(|r| r.into_dimensions().ok()).unwrap_or((0, 0));
-    if dw == 0 || dh == 0 || (dw as u64) * (dh as u64) > 80_000_000 {
+    let img = image::load_from_memory(&bytes).map_err(|e| CmdError::Failed(format!("can't decode the picture: {e}")))?;
+    if (img.width() as u64) * (img.height() as u64) > 80_000_000 {
         return Err(CmdError::Failed("picture is too large to edit".into()));
     }
-    let img = image::load_from_memory(&bytes).map_err(|e| CmdError::Failed(format!("can't decode the picture: {e}")))?;
     let out = f(img);
     let mut png = Vec::new();
     out.write_to(&mut std::io::Cursor::new(&mut png), image::ImageFormat::Png).map_err(|e| CmdError::Failed(e.to_string()))?;

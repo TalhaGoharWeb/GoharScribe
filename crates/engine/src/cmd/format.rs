@@ -386,14 +386,6 @@ fn char_style(s: &mut Session, v: &Value) -> CmdResult {
 
 fn set(s: &mut Session, v: &Value) -> CmdResult {
     let props: CharProps = serde_json::from_value(v.get("props").cloned().unwrap_or(Value::Null)).map_err(|e| CmdError::Params(e.to_string()))?;
-    // Bound string lengths (SEC-3: 1MB font name DoS).
-    if props.font.as_ref().is_some_and(|f| f.len() > 256) {
-        return Err(CmdError::Params("font name too long".into()));
-    }
-    // Clamp absurd font sizes.
-    if props.size.is_some_and(|sz| !sz.is_finite() || sz <= 0.0 || sz > 1638.0) {
-        return Err(CmdError::Params("font size out of range".into()));
-    }
     apply(s, &|c| c.overlay(&props))
 }
 
