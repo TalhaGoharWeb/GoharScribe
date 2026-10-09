@@ -160,8 +160,24 @@ fn wrap(r: Result<Value, String>) -> ToolResult {
 }
 
 /// Commands whose `path` parameter touches the filesystem.
-pub(crate) const PATH_COMMANDS: &[&str] =
-    &["file.open", "file.save", "file.saveAs", "file.exportPdf", "file.exportPng", "file.newFromTemplate", "file.saveTemplate", "file.recover"];
+pub(crate) const PATH_COMMANDS: &[&str] = &[
+    "file.open",
+    "file.save",
+    "file.saveAs",
+    "file.exportPdf",
+    "file.exportPng",
+    "file.newFromTemplate",
+    "file.saveTemplate",
+    "file.recover",
+    // H2: Additional path-taking commands (MCP jail bypass fix).
+    "insert.textFromFile",
+    "insert.picture",
+    "picture.change",
+    "review.compare",
+    "review.combine",
+    "mailings.recipients",
+    "mailings.finish",
+];
 
 /// Reject a file command whose `path` escapes the jail. No jail → always Ok.
 fn jail_check(jail: Option<&Path>, command: &str, params: &Value) -> Result<(), String> {
