@@ -425,11 +425,29 @@ fn sort(s: &mut Session, v: &Value) -> CmdResult {
         return Err(CmdError::Failed("sorting tables isn't supported here; use Table › Sort".into()));
     }
     let key = |b: &std::sync::Arc<Block>| b.as_para().map(|p| p.plain_text().to_lowercase()).unwrap_or_default();
+    // Save the section break from the last paragraph before sorting (M-1).
+    let section_break = slice.last().and_then(|b| b.as_para()).and_then(|p| p.section.clone());
     slice.sort_by(|x, y| {
         let o = natural_cmp(&key(x), &key(y));
         if desc { o.reverse() } else { o }
     });
     // Keep a section break on the last paragraph of the range where it was.
+    // Clear it from wherever sorting moved it, then restore to the new last paragraph.
+    // Use Arc::make_mut to handle shared references.
+    for b in slice.iter_mut() {
+        let block = std::sync::Arc::make_mut(b);
+        if let Block::Para(p) = block {
+            p.section = None;
+        }
+    }
+    if let Some(sb) = section_break {
+        if let Some(last) = slice.last_mut() {
+            let block = std::sync::Arc::make_mut(last);
+            if let Block::Para(p) = block {
+                p.section = Some(sb);
+            }
+        }
+    }
     s.sel = crate::Selection { anchor: Pos { off: 0, ..a }, focus: b };
     sel_result(s)
 }

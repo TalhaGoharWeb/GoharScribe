@@ -327,3 +327,57 @@ fn sec4_base64_decode_bounds_input() {
     let big = "A".repeat(300_000_000);
     assert!(crate::cmd::insert::base64_decode(&big).is_none(), "should reject >280MB input");
 }
+
+#[test]
+fn m1_sort_keeps_section_break_on_last_para() {
+    // M-1: para.sort must not move the section break with the paragraph.
+    let mut s = s();
+    run(&mut s, "document.setText", json!({"text": "charlie\nbravo\nalpha"}));
+    // Directly set a section break on the last paragraph (alpha).
+    {
+        let last = s.doc.body.last_mut().unwrap();
+        if let goharscribe_doc::Block::Para(p) = std::sync::Arc::make_mut(last) {
+            p.section = Some(Box::new(goharscribe_doc::SectionProps::default()));
+        }
+    }
+    // Verify setup.
+    let last_before = s.doc.body.last().and_then(|b| b.as_para()).unwrap();
+    assert!(last_before.section.is_some(), "setup: last paragraph should have section break");
+    // Select all and sort.
+    run(&mut s, "select.all", json!({}));
+    run(&mut s, "para.sort", json!({}));
+    // The section break should still be on the last paragraph.
+    let last = s.doc.body.last().and_then(|b| b.as_para()).unwrap();
+    assert!(last.section.is_some(), "section break should remain on last paragraph after sort");
+    assert_eq!(last.text, "charlie", "last paragraph should be charlie after ascending sort");
+    // And no other paragraph should have it.
+    for b in s.doc.body.iter().take(s.doc.body.len() - 1) {
+        if let Some(p) = b.as_para() {
+            assert!(p.section.is_none(), "only last paragraph should have section break");
+        }
+    }
+}
+
+#[test]
+fn m2_selection_breaks_typing_undo_group() {
+    // M-2: Changing selection must close the typing undo group.
+    let mut s = s();
+    run(&mut s, "text.insert", json!({"text": "hello"}));
+    run(&mut s, "select.all", json!({}));
+    run(&mut s, "text.insert", json!({"text": "X"}));
+    run(&mut s, "edit.undo", json!({}));
+    assert_eq!(text(&s), "hello", "undo should restore 'hello', not empty");
+}
+
+#[test]
+fn m3_reject_all_removes_inserted_paragraph() {
+    // M-3: Rejecting a tracked paragraph insertion must delete the paragraph.
+    let mut s = s();
+    run(&mut s, "review.trackChanges", json!({"value": true}));
+    run(&mut s, "text.insert", json!({"text": "a"}));
+    run(&mut s, "text.newParagraph", json!({}));
+    let before = s.doc.body.len();
+    assert_eq!(before, 2, "should have 2 paragraphs after tracked Enter");
+    run(&mut s, "review.rejectAll", json!({}));
+    assert_eq!(s.doc.body.len(), 1, "rejectAll should delete the inserted paragraph");
+}
