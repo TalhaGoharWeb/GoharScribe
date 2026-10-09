@@ -2,7 +2,18 @@
 
 **Date:** 2026-10-09
 
-## Fixed
+## Fixed (Security Audit Round 2)
+
+### H2: MCP filesystem jail bypass (High)
+- **File:** `crates/mcp/src/tools.rs`
+- **Issue:** 7 path-taking commands (`insert.textFromFile`, `insert.picture`, `picture.change`, `review.compare`, `review.combine`, `mailings.recipients`, `mailings.finish`) were not in `PATH_COMMANDS`, allowing jail escape via MCP.
+- **Fix:** Added all 7 to `PATH_COMMANDS`. Commit 12ef0ae.
+- **Regression tests:** `h2_jail_covers_all_path_commands`, `h2_jail_blocks_textfromfile_outside`
+
+### H3: picture.* adjust decodes before 80 Mpx guard (High)
+- **File:** `crates/engine/src/cmd/objects.rs`
+- **Issue:** `image::load_from_memory` decoded full bitmap before checking dimensions → hostile PNG could force multi-GB allocation → OOM.
+- **Fix:** Check dimensions via `ImageReader::into_dimensions()` before decode. Commit 12ef0ae.
 
 ### LAYERS-1: Register goharscribe-input in layer table
 - **Severity:** Medium
