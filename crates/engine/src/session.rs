@@ -344,10 +344,9 @@ impl Session {
         if spec.mutates {
             let label = if spec.id == "text.insert" { "Typing" } else { spec.label };
             self.checkpoint(label);
-        } else if !spec.id.starts_with("caret.") && !spec.id.starts_with("view.") && !spec.id.starts_with("select.") {
-            // Non-mutating commands other than caret movement/selection keep the typing group.
-        } else if spec.id.starts_with("caret.") || spec.id.starts_with("select.") {
-            // Caret movement or selection change breaks the typing undo group (M-2).
+        } else if !spec.id.starts_with("caret.") && !spec.id.starts_with("view.") {
+            // Non-mutating commands other than caret movement keep the typing group.
+        } else if spec.id.starts_with("caret.") {
             self.typing_open = false;
         }
         let run = spec.run;
