@@ -233,3 +233,47 @@ fn shapes_have_paths() {
     assert_eq!(parse_iso("garbage"), None);
     assert_eq!(civil(0), (1970, 1, 1, 0, 0, 0));
 }
+
+/// Minimal PNG with the given IHDR dimensions but no pixel data: a hostile
+/// file claims gigapixel dimensions in a few dozen bytes.
+fn huge_png(width: u32, height: u32) -> Vec<u8> {
+    fn crc32(data: &[u8]) -> u32 {
+        let mut crc = 0xFFFF_FFFFu32;
+        for &b in data {
+            crc ^= u32::from(b);
+            for _ in 0..8 {
+                let lsb = crc & 1;
+                crc >>= 1;
+                if lsb == 1 {
+                    crc ^= 0xEDB8_8320;
+                }
+            }
+        }
+        !crc
+    }
+    fn push_chunk(png: &mut Vec<u8>, typ: &[u8; 4], data: &[u8]) {
+        let mut chunk = typ.to_vec();
+        chunk.extend_from_slice(data);
+        png.extend_from_slice(&(data.len() as u32).to_be_bytes());
+        png.extend_from_slice(&chunk);
+        png.extend_from_slice(&crc32(&chunk).to_be_bytes());
+    }
+    let mut png = vec![0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A];
+    let mut ihdr = Vec::new();
+    ihdr.extend_from_slice(&width.to_be_bytes());
+    ihdr.extend_from_slice(&height.to_be_bytes());
+    ihdr.extend_from_slice(&[8, 2, 0, 0, 0]); // 8-bit truecolor
+    push_chunk(&mut png, b"IHDR", &ihdr);
+    push_chunk(&mut png, b"IDAT", &[]);
+    push_chunk(&mut png, b"IEND", &[]);
+    png
+}
+
+#[test]
+fn gigapixel_image_rejected_before_decode() {
+    // 50000x50000 RGBA would need ~10 GiB; the header dimension check must
+    // reject it before any pixel buffer is allocated.
+    assert!(load_image(&Arc::new(huge_png(50_000, 50_000))).is_none());
+    // A normal image still embeds.
+    assert!(load_image(&Arc::new(png())).is_some());
+}

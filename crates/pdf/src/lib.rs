@@ -943,8 +943,15 @@ impl Exporter<'_> {
 /// can't fail the whole export).
 fn load_image(data: &Arc<Vec<u8>>) -> Option<Image> {
     let fmt = image::guess_format(data).ok()?;
+    // Check dimensions BEFORE decoding: a hostile image can declare gigapixel
+    // dimensions in a tiny header and force a multi-gigabyte allocation.
+    let (dw, dh) = image::ImageReader::new(std::io::Cursor::new(&data[..])).with_guessed_format().ok()?.into_dimensions().ok()?;
+    if dw == 0 || dh == 0 || dw > MAX_IMAGE_SIDE || dh > MAX_IMAGE_SIDE {
+        return None;
+    }
     let dec = image::load_from_memory_with_format(data, fmt).ok()?;
     let (w, h) = (dec.width(), dec.height());
+    // Defense in depth: re-check after decode in case a decoder misreports.
     if w == 0 || h == 0 || w > MAX_IMAGE_SIDE || h > MAX_IMAGE_SIDE {
         return None;
     }

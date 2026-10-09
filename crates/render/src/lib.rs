@@ -110,8 +110,18 @@ fn image_cache() -> &'static Mutex<HashMap<(String, usize), Option<Arc<Pixmap>>>
 
 /// Decode an encoded image to a premultiplied pixmap.
 pub fn decode_pixmap(bytes: &[u8]) -> Option<Pixmap> {
+    // Check dimensions BEFORE decoding: a hostile image can declare gigapixel
+    // dimensions in a tiny header and force a multi-gigabyte allocation.
+    if let Some((w, h)) = image_size(bytes) {
+        if w == 0 || h == 0 || w > u16::MAX as u32 || h > u16::MAX as u32 {
+            return None;
+        }
+    } else {
+        return None;
+    }
     let img = image::load_from_memory(bytes).ok()?.to_rgba8();
     let (w, h) = img.dimensions();
+    // Defense in depth: re-check after decode in case a decoder misreports.
     if w == 0 || h == 0 || w > u16::MAX as u32 || h > u16::MAX as u32 {
         return None;
     }
@@ -497,5 +507,54 @@ mod tests {
         for k in [ShapeKind::Rectangle, ShapeKind::Ellipse, ShapeKind::Star, ShapeKind::Heart, ShapeKind::Arrow, ShapeKind::Line] {
             assert!(!shape_path(k, r).elements().is_empty());
         }
+    }
+
+    /// Minimal PNG with the given IHDR dimensions but no pixel data: a hostile
+    /// file claims gigapixel dimensions in a few dozen bytes.
+    fn huge_png(width: u32, height: u32) -> Vec<u8> {
+        fn crc32(data: &[u8]) -> u32 {
+            let mut crc = 0xFFFF_FFFFu32;
+            for &b in data {
+                crc ^= u32::from(b);
+                for _ in 0..8 {
+                    let lsb = crc & 1;
+                    crc >>= 1;
+                    if lsb == 1 {
+                        crc ^= 0xEDB8_8320;
+                    }
+                }
+            }
+            !crc
+        }
+        fn push_chunk(png: &mut Vec<u8>, typ: &[u8; 4], data: &[u8]) {
+            let mut chunk = typ.to_vec();
+            chunk.extend_from_slice(data);
+            png.extend_from_slice(&(data.len() as u32).to_be_bytes());
+            png.extend_from_slice(&chunk);
+            png.extend_from_slice(&crc32(&chunk).to_be_bytes());
+        }
+        let mut png = vec![0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A];
+        let mut ihdr = Vec::new();
+        ihdr.extend_from_slice(&width.to_be_bytes());
+        ihdr.extend_from_slice(&height.to_be_bytes());
+        ihdr.extend_from_slice(&[8, 2, 0, 0, 0]); // 8-bit truecolor
+        push_chunk(&mut png, b"IHDR", &ihdr);
+        push_chunk(&mut png, b"IDAT", &[]);
+        push_chunk(&mut png, b"IEND", &[]);
+        png
+    }
+
+    #[test]
+    fn gigapixel_png_rejected_before_decode() {
+        // 50000x50000 RGBA would need ~10 GiB; the header dimension check must
+        // reject it before any pixel buffer is allocated.
+        let hostile = huge_png(50_000, 50_000);
+        assert_eq!(image_size(&hostile), Some((50_000, 50_000)));
+        assert!(decode_pixmap(&hostile).is_none());
+        // A normal image still decodes.
+        let img = image::RgbaImage::from_pixel(2, 3, image::Rgba([1, 2, 3, 255]));
+        let mut buf = Vec::new();
+        image::DynamicImage::ImageRgba8(img).write_to(&mut std::io::Cursor::new(&mut buf), image::ImageFormat::Png).unwrap();
+        assert!(decode_pixmap(&buf).is_some());
     }
 }

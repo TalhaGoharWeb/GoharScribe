@@ -360,3 +360,40 @@ proptest::proptest! {
         proptest::prop_assert_eq!(got.trim(), text.trim(), "md: {}", String::from_utf8_lossy(&md));
     }
 }
+
+/// Minimal BMP with the given dimensions but no pixel data: a hostile file
+/// claims gigapixel dimensions in a 54-byte header.
+fn huge_bmp(width: i32, height: i32) -> Vec<u8> {
+    let mut bmp = vec![0u8; 54];
+    bmp[0] = b'B';
+    bmp[1] = b'M';
+    bmp[2..6].copy_from_slice(&54u32.to_le_bytes()); // file size
+    bmp[10] = 54; // pixel data offset
+    bmp[14] = 40; // DIB header size
+    bmp[18..22].copy_from_slice(&width.to_le_bytes());
+    bmp[22..26].copy_from_slice(&height.to_le_bytes());
+    bmp[26] = 1; // planes
+    bmp[28] = 24; // bits per pixel
+    bmp
+}
+
+#[test]
+fn rtf_skips_gigapixel_bmp_without_decoding() {
+    // 40000x40000x3 would need ~4.8 GiB to decode; the RTF exporter must check
+    // dimensions first and skip the picture instead of allocating.
+    assert_eq!(model::image_px(&huge_bmp(40_000, 40_000)), Some((40_000, 40_000)));
+    let mut d = Document::new();
+    let key = d.add_media(huge_bmp(40_000, 40_000), "bmp");
+    let mut ip = Paragraph::with_text("Picture: ", CharProps::default());
+    let n = ip.len();
+    ip.insert_object(
+        n,
+        InlineObject::Image { media: key, w: 60.0, h: 30.0, alt: "huge".into(), float: Default::default(), crop: [0.0; 4] },
+        &CharProps::default(),
+    )
+    .unwrap();
+    d.body = vec![para_block(ip)];
+    let rtf = export("rtf", &d).unwrap().unwrap();
+    let text = String::from_utf8_lossy(&rtf);
+    assert!(!text.contains("\\pict"), "hostile image must be skipped, not decoded");
+}

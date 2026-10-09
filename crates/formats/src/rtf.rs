@@ -24,6 +24,9 @@ use crate::txt::cp1252;
 const MAX_GROUPS: usize = 512;
 /// Largest picture we decode (bytes).
 const MAX_PICT: usize = 64 << 20;
+/// Largest image side (pixels) we decode; larger headers are rejected before
+/// any pixel buffer is allocated.
+const MAX_IMAGE_SIDE: u32 = 30_000;
 
 // ---------------------------------------------------------------------------------------------
 // Export
@@ -153,7 +156,13 @@ impl Writer {
             "png" => (img.data.to_vec(), "\\pngblip"),
             "jpeg" | "jpg" => (img.data.to_vec(), "\\jpegblip"),
             _ => {
-                // Re-encode other formats as PNG.
+                // Re-encode other formats as PNG. Check dimensions BEFORE decoding:
+                // a hostile image can declare huge dimensions in a tiny header
+                // and force a multi-gigabyte allocation.
+                let Some((pw0, ph0)) = model::image_px(&img.data) else { return };
+                if pw0 == 0 || ph0 == 0 || pw0 > MAX_IMAGE_SIDE || ph0 > MAX_IMAGE_SIDE {
+                    return;
+                }
                 let Ok(dec) = image::load_from_memory(&img.data) else { return };
                 let mut buf = Vec::new();
                 if dec.write_to(&mut std::io::Cursor::new(&mut buf), image::ImageFormat::Png).is_err() {
