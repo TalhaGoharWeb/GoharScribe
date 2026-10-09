@@ -167,8 +167,27 @@ fn tall_first_page_header_pushes_body_down() {
     let l = lay(&d);
     let first = l.caret(&Pos::body(0, 0)).unwrap();
     assert!(first.top > d.last_section.margin_top + 50.0, "{first:?}");
-    let later = l.caret_on(&Pos::body(119, 0), l.pages.len() - 1).unwrap();
-    assert!(later.top < first.top, "{later:?}");
+    // Later pages have no tall first-page header, so their body starts at the
+    // normal top — above where the pushed-down first page begins. (The old
+    // assertion probed the last paragraph's position, which depends on
+    // pagination luck and was flaky.)
+    let mut later_y = None;
+    for p in l.pages.iter().skip(1) {
+        if let Some(y) = p
+            .items
+            .iter()
+            .filter_map(|it| match it {
+                Placed::Lines { story: StoryRef::Body, y, .. } => Some(*y),
+                _ => None,
+            })
+            .next()
+        {
+            later_y = Some(y);
+            break;
+        }
+    }
+    let later_y = later_y.expect("a later page carries body text");
+    assert!(later_y < first.top, "later_y={later_y} first={first:?}");
 }
 
 #[test]
