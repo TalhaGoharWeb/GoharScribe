@@ -1079,8 +1079,17 @@ fn inlines_md(inlines: &[Inline]) -> String {
                 }
             }
             Inline::Image(img) => {
-                let name = format!("image.{}", img.ext);
-                pieces.push((String::new(), Fmt::default(), Some(format!("![{}]({})", escape(&img.alt), name))));
+                // F-4: Embed image as data URI to avoid silent loss on round-trip.
+                let mime = match img.ext.as_str() {
+                    "png" => "image/png",
+                    "jpg" | "jpeg" => "image/jpeg",
+                    "gif" => "image/gif",
+                    "webp" => "image/webp",
+                    "bmp" => "image/bmp",
+                    _ => "application/octet-stream",
+                };
+                let data_uri = format!("data:{mime};base64,{}", crate::model::base64_encode(&img.data));
+                pieces.push((String::new(), Fmt::default(), Some(format!("![{}]({})", escape(&img.alt), data_uri))));
             }
             Inline::Anchor(a) => {
                 let safe: String = a.chars().filter(|c| c.is_alphanumeric() || matches!(c, '_' | '-' | '.' | ':')).collect();
