@@ -148,7 +148,7 @@ pub fn canvas_events(app: &mut WordApp, ctx: &egui::Context) {
                     app.session.painter = None;
                     continue;
                 }
-                if key == Key::Escape && matches!(app.session.sel.focus.story, wordcraft_doc::StoryRef::Part(_)) && app.session.sel.is_collapsed() {
+                if key == Key::Escape && matches!(app.session.sel.focus.story, goharscribe_doc::StoryRef::Part(_)) && app.session.sel.is_collapsed() {
                     let _ = app.run("insert.closeHeader", json!({}));
                     continue;
                 }

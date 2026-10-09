@@ -1,10 +1,10 @@
+use goharscribe_doc::{Pos, StoryRef};
 use serde_json::json;
-use wordcraft_doc::{Pos, StoryRef};
 
 use crate::{Session, cmd};
 
 fn s() -> Session {
-    Session::new(wordcraft_doc::Document::new())
+    Session::new(goharscribe_doc::Document::new())
 }
 
 fn run(s: &mut Session, id: &str, v: serde_json::Value) -> serde_json::Value {

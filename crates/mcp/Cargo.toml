@@ -1,16 +1,16 @@
 [package]
-name = "wordcraft-mcp"
+name = "goharscribe-mcp"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "WordCraft MCP server: every command as a tool, headless or bridged to the running app"
+description = "GoharScribe MCP server: every command as a tool, headless or bridged to the running app"
 
 [lints]
 workspace = true
 
 [dependencies]
-wordcraft-doc = { workspace = true }
-wordcraft-engine = { workspace = true }
-wordcraft-render = { workspace = true }
+goharscribe-doc = { workspace = true }
+goharscribe-engine = { workspace = true }
+goharscribe-render = { workspace = true }
 serde_json = { workspace = true }
 log = { workspace = true }

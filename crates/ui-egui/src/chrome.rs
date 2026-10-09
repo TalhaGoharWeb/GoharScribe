@@ -1,8 +1,8 @@
 //! Title bar (Quick Access Toolbar, title, search, account) and status bar.
 
 use egui::{Align2, Rect, Sense, Stroke, Ui, pos2, vec2};
+use goharscribe_doc::StoryRef;
 use serde_json::json;
-use wordcraft_doc::StoryRef;
 
 use crate::theme::{Tokens, medium, regular, semibold};
 use crate::{WordApp, icons};
@@ -95,7 +95,7 @@ pub fn title_bar(app: &mut WordApp, ui: &mut Ui) {
                             egui::Color32::WHITE,
                         );
                         ui.painter().text(pos2(r.min.x + 24.0, r.center().y), Align2::LEFT_CENTER, "Discord", medium(11.5), egui::Color32::WHITE);
-                        if resp.on_hover_text("Join the ArtCraft community on Discord").clicked() {
+                        if resp.on_hover_text("Join the GoharScribe community on Discord").clicked() {
                             let _ = app.run("ui.discord", json!({}));
                         }
                         ui.add_space(8.0);
@@ -157,7 +157,7 @@ pub fn status_bar(app: &mut WordApp, ui: &mut Ui) {
                 let wtxt = if app.session.sel.is_collapsed() {
                     format!("{words} words")
                 } else {
-                    let sw = wordcraft_doc::count_words(&app.session.selected_text());
+                    let sw = goharscribe_doc::count_words(&app.session.selected_text());
                     format!("{sw} of {words} words")
                 };
                 if st(ui, &wtxt).clicked() {
@@ -201,8 +201,8 @@ pub fn status_bar(app: &mut WordApp, ui: &mut Ui) {
                     let mode = app.session.view.mode;
                     let read = app.session.view.read_mode;
                     for (icon, id, on) in [
-                        ("webLayout", "view.webLayout", mode == wordcraft_layout::ViewMode::Web),
-                        ("printLayout", "view.printLayout", mode == wordcraft_layout::ViewMode::Print && !read),
+                        ("webLayout", "view.webLayout", mode == goharscribe_layout::ViewMode::Web),
+                        ("printLayout", "view.printLayout", mode == goharscribe_layout::ViewMode::Print && !read),
                         ("readMode", "view.readMode", read),
                     ] {
                         let (r, resp) = ui.allocate_exact_size(vec2(22.0, 20.0), Sense::click());

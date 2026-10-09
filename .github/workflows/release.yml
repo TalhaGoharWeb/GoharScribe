@@ -1,5 +1,5 @@
 # Release pipeline: every push to `release` builds signed installers for every platform and
-# creates or updates the draft GitHub Release "WordCraft v<version>". See docs/releasing.md.
+# creates or updates the draft GitHub Release "GoharScribe v<version>". See docs/releasing.md.
 #
 # The signing jobs (macOS, Windows) and the job that drafts the release run in the `release`
 # environment (restricted to the `release` branch), which holds the signing secrets. Every secret
@@ -31,7 +31,7 @@ env:
   CARGO_TERM_COLOR: always
   CARGO_INCREMENTAL: 0
   RUST_BACKTRACE: 1
-  WORDCRAFT_BUILD_SHA: ${{ github.sha }}
+  GOHARSCRIBE_BUILD_SHA: ${{ github.sha }}
   INPUT_VERSION: ${{ inputs.version }}
 
 jobs:
@@ -60,7 +60,7 @@ jobs:
             echo "date=$(date -u +%Y-%m-%d)"
             echo "prerelease=$pre"
           } >>"$GITHUB_OUTPUT"
-          echo "### WordCraft v$v (\`${GITHUB_SHA::9}\`)" >>"$GITHUB_STEP_SUMMARY"
+          echo "### GoharScribe v$v (\`${GITHUB_SHA::9}\`)" >>"$GITHUB_STEP_SUMMARY"
 
   macos:
     name: macOS universal
@@ -68,8 +68,8 @@ jobs:
     runs-on: macos-15-xlarge  # M2 Pro larger runner; use only in release.yml (actions_macos_xl budget caps spend)
     environment: release
     env:
-      WORDCRAFT_VERSION: ${{ needs.version.outputs.version }}
-      WORDCRAFT_BUILD_DATE: ${{ needs.version.outputs.date }}
+      GOHARSCRIBE_VERSION: ${{ needs.version.outputs.version }}
+      GOHARSCRIBE_BUILD_DATE: ${{ needs.version.outputs.date }}
     steps:
       - uses: actions/checkout@v4
       # Optional font input (docs: storytold/craft-fonts docs/integration.md); releases always embed it.
@@ -87,7 +87,7 @@ jobs:
           key: release-macos-universal
       - name: Apply version override
         if: inputs.version != ''
-        run: cargo xtask version set "$WORDCRAFT_VERSION"
+        run: cargo xtask version set "$GOHARSCRIBE_VERSION"
       - name: Import signing certificate
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
@@ -127,8 +127,8 @@ jobs:
           # .github/workflows/windows-arm64.yml installs and runs it on ARM64 hardware.
           - { arch: arm64, target: aarch64-pc-windows-msvc }
     env:
-      WORDCRAFT_VERSION: ${{ needs.version.outputs.version }}
-      WORDCRAFT_BUILD_DATE: ${{ needs.version.outputs.date }}
+      GOHARSCRIBE_VERSION: ${{ needs.version.outputs.version }}
+      GOHARSCRIBE_BUILD_DATE: ${{ needs.version.outputs.date }}
     steps:
       - uses: actions/checkout@v4
       # Optional font input (docs: storytold/craft-fonts docs/integration.md); releases always embed it.
@@ -147,7 +147,7 @@ jobs:
       - name: Apply version override
         if: inputs.version != ''
         shell: bash
-        run: cargo xtask version set "$WORDCRAFT_VERSION"
+        run: cargo xtask version set "$GOHARSCRIBE_VERSION"
       - name: Install WiX
         shell: pwsh
         run: dotnet tool install --global wix --version 5.0.2
@@ -185,8 +185,8 @@ jobs:
           - { arch: x86_64, runner: ubuntu-22.04, deb: amd64 }
           - { arch: aarch64, runner: ubuntu-22.04-arm, deb: arm64 }
     env:
-      WORDCRAFT_VERSION: ${{ needs.version.outputs.version }}
-      WORDCRAFT_BUILD_DATE: ${{ needs.version.outputs.date }}
+      GOHARSCRIBE_VERSION: ${{ needs.version.outputs.version }}
+      GOHARSCRIBE_BUILD_DATE: ${{ needs.version.outputs.date }}
       NFPM_VERSION: 2.47.0
     steps:
       - uses: actions/checkout@v4
@@ -212,7 +212,7 @@ jobs:
           key: release-linux-${{ matrix.arch }}
       - name: Apply version override
         if: inputs.version != ''
-        run: cargo xtask version set "$WORDCRAFT_VERSION"
+        run: cargo xtask version set "$GOHARSCRIBE_VERSION"
       - name: Build and package (AppImage, deb, rpm, tar.gz)
         env:
           CRAFT_FONTS_DIR: ${{ github.workspace }}/craft-fonts
@@ -221,9 +221,9 @@ jobs:
       - name: Check the packages
         run: |
           dpkg-deb --info dist/release/*.deb
-          dpkg-deb --contents dist/release/*.deb | grep -E 'usr/bin/wordcraft$|metainfo|applications'
-          ldd target/release/wordcraft
-          python3 -c "import yaml; m = yaml.safe_load(open('packaging/linux/flatpak/ai.storyteller.wordcraft.yml')); assert m['id'] == 'ai.storyteller.wordcraft'"
+          dpkg-deb --contents dist/release/*.deb | grep -E 'usr/bin/goharscribe$|metainfo|applications'
+          ldd target/release/goharscribe
+          python3 -c "import yaml; m = yaml.safe_load(open('packaging/linux/flatpak/com.talhagohar.goharscribe.yml')); assert m['id'] == 'com.talhagohar.goharscribe'"
           for appimage in dist/release/*.AppImage; do
             chmod +x "$appimage"
             APPIMAGE_EXTRACT_AND_RUN=1 "$appimage" --version
@@ -251,8 +251,8 @@ jobs:
           - { arch: x86_64, runner: ubuntu-24.04 }
           - { arch: aarch64, runner: ubuntu-24.04-arm }
     env:
-      WORDCRAFT_VERSION: ${{ needs.version.outputs.version }}
-      WORDCRAFT_BUILD_DATE: ${{ needs.version.outputs.date }}
+      GOHARSCRIBE_VERSION: ${{ needs.version.outputs.version }}
+      GOHARSCRIBE_BUILD_DATE: ${{ needs.version.outputs.date }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -268,7 +268,7 @@ jobs:
           # Ubuntu 24.04's AppArmor blocks the unprivileged user namespaces bubblewrap needs.
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
       - name: Build the Flatpak bundle
-        run: packaging/linux/flatpak-bundle.sh "dist/linux/wordcraft-$WORDCRAFT_VERSION-linux-${{ matrix.arch }}.tar.gz"
+        run: packaging/linux/flatpak-bundle.sh "dist/linux/goharscribe-$GOHARSCRIBE_VERSION-linux-${{ matrix.arch }}.tar.gz"
       - uses: actions/upload-artifact@v4
         with:
           name: release-flatpak-${{ matrix.arch }}
@@ -281,8 +281,8 @@ jobs:
     runs-on: ubuntu-latest
     # No `environment: release`: this job signs nothing, so it gets no release secrets.
     env:
-      WORDCRAFT_VERSION: ${{ needs.version.outputs.version }}
-      WORDCRAFT_BUILD_DATE: ${{ needs.version.outputs.date }}
+      GOHARSCRIBE_VERSION: ${{ needs.version.outputs.version }}
+      GOHARSCRIBE_BUILD_DATE: ${{ needs.version.outputs.date }}
       TRUNK_VERSION: 0.21.14
     steps:
       - uses: actions/checkout@v4
@@ -306,7 +306,7 @@ jobs:
           trunk --version
       - name: Apply version override
         if: inputs.version != ''
-        run: cargo xtask version set "$WORDCRAFT_VERSION"
+        run: cargo xtask version set "$GOHARSCRIBE_VERSION"
       - name: Build and zip
         env:
           CRAFT_FONTS_DIR: ${{ github.workspace }}/craft-fonts
@@ -325,8 +325,8 @@ jobs:
     timeout-minutes: 300
     # No `environment: release`: this job signs nothing, so it gets no release secrets.
     env:
-      WORDCRAFT_VERSION: ${{ needs.version.outputs.version }}
-      WORDCRAFT_BUILD_DATE: ${{ needs.version.outputs.date }}
+      GOHARSCRIBE_VERSION: ${{ needs.version.outputs.version }}
+      GOHARSCRIBE_BUILD_DATE: ${{ needs.version.outputs.date }}
     steps:
       - uses: actions/checkout@v4
       # Optional font input (docs: storytold/craft-fonts docs/integration.md); releases always embed it.
@@ -344,7 +344,7 @@ jobs:
           usesh: true
           cpu: 4
           mem: 12288
-          envs: "WORDCRAFT_VERSION WORDCRAFT_BUILD_DATE WORDCRAFT_BUILD_SHA"
+          envs: "GOHARSCRIBE_VERSION GOHARSCRIBE_BUILD_DATE GOHARSCRIBE_BUILD_SHA"
           copyback: true
           prepare: |
             pkg install -y git curl pkgconf cmake python3 libxkbcommon wayland libX11 libXcursor libXrandr libXi libxcb mesa-libs vulkan-loader gtk3 fontconfig freetype2 alsa-lib
@@ -352,13 +352,13 @@ jobs:
           run: |
             . "$HOME/.cargo/env"
             git config --global --add safe.directory "*"
-            cargo run -q -p xtask -- version set "$WORDCRAFT_VERSION"
-            CRAFT_FONTS_DIR="$PWD/craft-fonts" CRAFT_FONTS_REQUIRED=1 cargo build --release --locked -p wordcraft -p wordcraft-cli
-            name="wordcraft-$WORDCRAFT_VERSION-freebsd-x86_64"
+            cargo run -q -p xtask -- version set "$GOHARSCRIBE_VERSION"
+            CRAFT_FONTS_DIR="$PWD/craft-fonts" CRAFT_FONTS_REQUIRED=1 cargo build --release --locked -p goharscribe -p goharscribe-cli
+            name="goharscribe-$GOHARSCRIBE_VERSION-freebsd-x86_64"
             mkdir -p "dist/release/$name"
-            cp target/release/wordcraft target/release/wordcraft-cli LICENSE-MIT LICENSE-APACHE NOTICE ATTRIBUTION.md README.md "dist/release/$name/"
-            cp packaging/linux/ai.storyteller.wordcraft.desktop "dist/release/$name/"
-            cp assets/app-icon/hicolor/256x256/apps/ai.storyteller.wordcraft.png "dist/release/$name/"
+            cp target/release/goharscribe target/release/goharscribe-cli LICENSE-MIT LICENSE-APACHE NOTICE ATTRIBUTION.md README.md "dist/release/$name/"
+            cp packaging/linux/com.talhagohar.goharscribe.desktop "dist/release/$name/"
+            cp assets/app-icon/hicolor/256x256/apps/com.talhagohar.goharscribe.png "dist/release/$name/"
             # The embedded craft-fonts' licences, as in the Linux packages (OFL-<family>.txt).
             for f in craft-fonts/fonts/*/OFL.txt; do cp "$f" "dist/release/$name/OFL-$(basename "$(dirname "$f")").txt"; done
             tar -C dist/release -czf "dist/release/$name.tar.gz" "$name"
@@ -396,7 +396,7 @@ jobs:
         working-directory: artifacts
         run: |
           tag="v$VERSION"
-          title="WordCraft v$VERSION"
+          title="GoharScribe v$VERSION"
           pre=()
           if [ "$PRERELEASE" = true ]; then pre=(--prerelease); fi
           if draft="$(gh release view "$tag" --json isDraft --jq .isDraft 2>/dev/null)"; then

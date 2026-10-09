@@ -1,6 +1,6 @@
 [package]
-name = "wordcraft-web"
-description = "WordCraft in the browser (eframe web runner, WebGPU with WebGL2 fallback)"
+name = "goharscribe-web"
+description = "GoharScribe in the browser (eframe web runner, WebGPU with WebGL2 fallback)"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -10,16 +10,16 @@ publish = false
 workspace = true
 
 [[bin]]
-name = "wordcraft-web"
+name = "goharscribe-web"
 path = "src/main.rs"
 
 [dependencies]
-wordcraft-engine = { workspace = true }
-wordcraft-ui-egui = { workspace = true }
+goharscribe-engine = { workspace = true }
+goharscribe-ui-egui = { workspace = true }
 egui = { workspace = true }
 log = { workspace = true }
 serde_json = { workspace = true }
-wordcraft-doc = { workspace = true }
+goharscribe-doc = { workspace = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 # `wgpu` pulls egui-wgpu's defaults: WebGPU plus the WebGL2 fallback.

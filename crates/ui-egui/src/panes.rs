@@ -1,8 +1,8 @@
 //! Side panes: Navigation (headings, pages, search results), Styles, Comments.
 
 use egui::{Stroke, Ui, vec2};
+use goharscribe_doc::{Pos, StoryRef};
 use serde_json::{Value, json};
-use wordcraft_doc::{Pos, StoryRef};
 
 use crate::WordApp;
 use crate::theme::{Tokens, regular, semibold};
@@ -164,8 +164,8 @@ fn styles(app: &mut WordApp, ui: &mut Ui) {
         .styles
         .styles
         .iter()
-        .filter(|s| !s.hidden && s.kind != wordcraft_doc::StyleKind::Table)
-        .map(|s| (s.id.clone(), s.name.clone(), s.kind == wordcraft_doc::StyleKind::Character))
+        .filter(|s| !s.hidden && s.kind != goharscribe_doc::StyleKind::Table)
+        .map(|s| (s.id.clone(), s.name.clone(), s.kind == goharscribe_doc::StyleKind::Character))
         .collect();
     list.sort_by_key(|s| s.1.to_lowercase());
     egui::ScrollArea::vertical().show(ui, |ui| {
@@ -235,8 +235,10 @@ fn comments(app: &mut WordApp, ui: &mut Ui) {
                         ui.data_mut(|d| d.insert_temp(key, text.clone()));
                     }
                     if r.lost_focus() {
-                        let blocks =
-                            text.split('\n').map(|l| wordcraft_doc::para_block(wordcraft_doc::Paragraph::with_text(l, Default::default()))).collect();
+                        let blocks = text
+                            .split('\n')
+                            .map(|l| goharscribe_doc::para_block(goharscribe_doc::Paragraph::with_text(l, Default::default())))
+                            .collect();
                         let _ = app.session.doc.set_story(StoryRef::Part(part), blocks);
                         app.session.touch();
                         ui.data_mut(|d| d.remove::<String>(key));

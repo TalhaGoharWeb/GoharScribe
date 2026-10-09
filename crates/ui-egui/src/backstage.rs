@@ -66,15 +66,15 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
                 }
             }
             ui.with_layout(egui::Layout::bottom_up(egui::Align::Min), |ui| {
-                for (label, id) in [("About", "about"), ("Discord community", "discord")] {
+                for (label, id) in [("About", "about"), ("GoharScribe on GitHub", "github")] {
                     let (r, resp) = ui.allocate_exact_size(vec2(200.0, 32.0), Sense::click());
                     if resp.hovered() {
                         ui.painter().rect_filled(r, 0.0, egui::Color32::from_white_alpha(26));
                     }
                     ui.painter().text(pos2(r.min.x + 22.0, r.center().y), Align2::LEFT_CENTER, label, regular(13.0), egui::Color32::WHITE);
                     if resp.clicked() {
-                        if id == "discord" {
-                            let _ = app.run("ui.discord", json!({}));
+                        if id == "github" {
+                            let _ = app.run("ui.github", json!({}));
                         } else {
                             app.dialog = crate::dialogs::Dialog::open("about", app);
                         }
@@ -113,11 +113,11 @@ fn template_tile(ui: &mut Ui, app: &mut WordApp, label: &str, template: &str) {
         let ppp = ui.ctx().pixels_per_point();
         let key = format!("tpl:{template}:{ppp}");
         let tex = ui.ctx().data(|d| d.get_temp::<egui::TextureHandle>(egui::Id::new(&key))).or_else(|| {
-            let mut s = wordcraft_engine::Session::new(wordcraft_doc::Document::new());
+            let mut s = goharscribe_engine::Session::new(goharscribe_doc::Document::new());
             let _ = s.run("file.new", &json!({"template": template}));
             let l = s.export_layout();
             let page = l.pages.first()?;
-            let img = wordcraft_render::render_page(&s.doc, page, 150.0 / page.w * ppp, &Default::default());
+            let img = goharscribe_render::render_page(&s.doc, page, 150.0 / page.w * ppp, &Default::default());
             let px = img.to_straight();
             let h = ui.ctx().load_texture(
                 &key,
@@ -140,7 +140,7 @@ fn template_tile(ui: &mut Ui, app: &mut WordApp, label: &str, template: &str) {
 }
 
 fn new_page(app: &mut WordApp, ui: &mut Ui) {
-    let hour = wordcraft_engine::cmd::now_iso().get(11..13).and_then(|h| h.parse::<u32>().ok()).unwrap_or(9);
+    let hour = goharscribe_engine::cmd::now_iso().get(11..13).and_then(|h| h.parse::<u32>().ok()).unwrap_or(9);
     heading(
         ui,
         if hour < 12 {
@@ -279,5 +279,5 @@ fn options_page(app: &mut WordApp, ui: &mut Ui) {
     }
     ui.add_space(10.0);
     ui.label(egui::RichText::new("Agents").font(semibold(15.0)));
-    ui.label("Every command is available to scripts and AI agents: run `wordcraft-cli mcp` for an MCP server, or start the app with `--control <port>` for the JSON control channel.");
+    ui.label("Every command is available to scripts and AI agents: run `goharscribe-cli mcp` for an MCP server, or start the app with `--control <port>` for the JSON control channel.");
 }

@@ -1,6 +1,6 @@
-//! WordCraft in the browser.
+//! GoharScribe in the browser.
 //!
-//! Runs the same [`wordcraft_ui_egui::WordApp`] as the desktop app through eframe's web runner
+//! Runs the same [`goharscribe_ui_egui::WordApp`] as the desktop app through eframe's web runner
 //! (wgpu: WebGPU where available, WebGL2 otherwise). Build with `trunk build --release` from this
 //! directory (output in `dist/web`).
 //!
@@ -19,5 +19,5 @@ fn main() {
 
 #[cfg(not(target_arch = "wasm32"))]
 fn main() {
-    eprintln!("wordcraft-web only runs in the browser: build it with `trunk build --release` in apps/wordcraft-web");
+    eprintln!("goharscribe-web only runs in the browser: build it with `trunk build --release` in apps/goharscribe-web");
 }

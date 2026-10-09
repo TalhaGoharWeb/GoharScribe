@@ -1,8 +1,8 @@
 //! Layout tab: page setup (margins, orientation, size, columns), breaks, line numbers, hyphenation.
 
+use goharscribe_doc::section::{Columns, LineNumbering, SectionProps, SectionStart};
+use goharscribe_doc::{Block, Pos};
 use serde_json::{Value, json};
-use wordcraft_doc::section::{Columns, LineNumbering, SectionProps, SectionStart};
-use wordcraft_doc::{Block, Pos};
 
 use super::sel_result;
 use crate::{CmdError, CmdResult, CommandSpec, Selection, Session, p};
@@ -31,9 +31,9 @@ pub fn specs() -> Vec<CommandSpec> {
             with_sect(s, |x| {
                 x.line_numbers = match mode {
                     "none" => None,
-                    "restartPage" => Some(LineNumbering { restart: wordcraft_doc::section::LineNumberRestart::Page, ..Default::default() }),
-                    "restartSection" => Some(LineNumbering { restart: wordcraft_doc::section::LineNumberRestart::Section, ..Default::default() }),
-                    _ => Some(LineNumbering { restart: wordcraft_doc::section::LineNumberRestart::Continuous, ..Default::default() }),
+                    "restartPage" => Some(LineNumbering { restart: goharscribe_doc::section::LineNumberRestart::Page, ..Default::default() }),
+                    "restartSection" => Some(LineNumbering { restart: goharscribe_doc::section::LineNumberRestart::Section, ..Default::default() }),
+                    _ => Some(LineNumbering { restart: goharscribe_doc::section::LineNumberRestart::Continuous, ..Default::default() }),
                 }
             })
         })
@@ -54,9 +54,9 @@ pub fn specs() -> Vec<CommandSpec> {
         .params(r#"{"section"?: SectionProps}"#),
         CommandSpec::new("layout.verticalAlign", "Vertical Alignment", "Layout › Page Setup › Layout", |s, v| {
             let va = match p::str(v, "value") {
-                Some("center") => wordcraft_doc::props::VAlign::Center,
-                Some("bottom") => wordcraft_doc::props::VAlign::Bottom,
-                _ => wordcraft_doc::props::VAlign::Top,
+                Some("center") => goharscribe_doc::props::VAlign::Center,
+                Some("bottom") => goharscribe_doc::props::VAlign::Bottom,
+                _ => goharscribe_doc::props::VAlign::Top,
             };
             with_sect(s, |x| x.valign = va)
         }),
@@ -69,7 +69,7 @@ pub fn specs() -> Vec<CommandSpec> {
             sel_result(s)
         }),
         CommandSpec::new("layout.pageNumberFormat", "Format Page Numbers", "Insert › Header & Footer › Page Number", |s, v| {
-            let fmt = p::str(v, "format").map(wordcraft_doc::section::NumFormat::from_ooxml);
+            let fmt = p::str(v, "format").map(goharscribe_doc::section::NumFormat::from_ooxml);
             let start = p::u64(v, "start").map(|x| x.min(100_000) as u32);
             with_sect(s, |x| {
                 if let Some(f) = fmt {
@@ -148,7 +148,7 @@ fn margins(s: &mut Session, v: &Value) -> CmdResult {
 
 fn size(s: &mut Session, v: &Value) -> CmdResult {
     let (w, h) = if let Some(n) = p::str(v, "name") {
-        let (_, w, h) = wordcraft_geom::PAPER_SIZES
+        let (_, w, h) = goharscribe_geom::PAPER_SIZES
             .iter()
             .find(|(name, _, _)| name.eq_ignore_ascii_case(n))
             .ok_or_else(|| CmdError::Params(format!("unknown paper `{n}`")))?;
@@ -200,7 +200,7 @@ fn breaks(s: &mut Session, v: &Value) -> CmdResult {
         "oddPage" => SectionStart::OddPage,
         x => return Err(CmdError::Params(format!("unknown break `{x}`"))),
     };
-    if s.sel.focus.story != wordcraft_doc::StoryRef::Body || s.sel.focus.path.depth() > 0 {
+    if s.sel.focus.story != goharscribe_doc::StoryRef::Body || s.sel.focus.path.depth() > 0 {
         return Err(CmdError::Failed("section breaks go in the main text".into()));
     }
     // Section break: the paragraph before the caret ends a section with the current props; the

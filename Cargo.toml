@@ -1,29 +1,29 @@
 [workspace]
 resolver = "3"
 members = ["crates/*", "apps/*", "xtask"]
-default-members = ["crates/*", "apps/wordcraft", "apps/wordcraft-cli", "xtask"]
+default-members = ["crates/*", "apps/goharscribe", "apps/goharscribe-cli", "xtask"]
 
 [workspace.package]
-version = "0.3.0"
+version = "0.1.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 rust-version = "1.90"
-repository = "https://github.com/storytold/wordcraft"
+repository = "https://github.com/TalhaGoharWeb/goharscribe"
 
 [workspace.dependencies]
 # internal
-wordcraft-geom = { path = "crates/geom" }
-wordcraft-doc = { path = "crates/doc" }
-wordcraft-fonts = { path = "crates/fonts" }
-wordcraft-layout = { path = "crates/layout" }
-wordcraft-docx = { path = "crates/docx" }
-wordcraft-formats = { path = "crates/formats" }
-wordcraft-render = { path = "crates/render" }
-wordcraft-pdf = { path = "crates/pdf" }
-wordcraft-proof = { path = "crates/proof" }
-wordcraft-engine = { path = "crates/engine" }
-wordcraft-mcp = { path = "crates/mcp" }
-wordcraft-ui-egui = { path = "crates/ui-egui" }
+goharscribe-geom = { path = "crates/geom" }
+goharscribe-doc = { path = "crates/doc" }
+goharscribe-fonts = { path = "crates/fonts" }
+goharscribe-layout = { path = "crates/layout" }
+goharscribe-docx = { path = "crates/docx" }
+goharscribe-formats = { path = "crates/formats" }
+goharscribe-render = { path = "crates/render" }
+goharscribe-pdf = { path = "crates/pdf" }
+goharscribe-proof = { path = "crates/proof" }
+goharscribe-engine = { path = "crates/engine" }
+goharscribe-mcp = { path = "crates/mcp" }
+goharscribe-ui-egui = { path = "crates/ui-egui" }
 
 # foundation
 kurbo = { version = "0.13", features = ["serde"] }

@@ -1,4 +1,4 @@
-# Build with: trunk build --release   (from apps/wordcraft-web)
+# Build with: trunk build --release   (from apps/goharscribe-web)
 [build]
 target = "index.html"
 dist = "../../dist/web"

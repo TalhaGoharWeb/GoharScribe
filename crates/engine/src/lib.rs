@@ -1,4 +1,4 @@
-//! WordCraft engine: the editing session and its commands.
+//! GoharScribe engine: the editing session and its commands.
 //!
 //! **Everything is a command.** Each user-visible action is a [`CommandSpec`] with a stable id
 //! (`format.bold`, `insert.table`), a label, the ribbon/menu location, a default shortcut, a
@@ -17,10 +17,10 @@ use std::collections::HashMap;
 
 use serde_json::Value;
 
+pub use goharscribe_doc as doc;
+pub use goharscribe_layout as layout;
+pub use goharscribe_render as render;
 pub use session::{FindState, Selection, Session, ViewState};
-pub use wordcraft_doc as doc;
-pub use wordcraft_layout as layout;
-pub use wordcraft_render as render;
 
 #[derive(Debug, thiserror::Error, Clone, PartialEq)]
 pub enum CmdError {
@@ -34,8 +34,8 @@ pub enum CmdError {
     Failed(String),
 }
 
-impl From<wordcraft_doc::DocError> for CmdError {
-    fn from(e: wordcraft_doc::DocError) -> Self {
+impl From<goharscribe_doc::DocError> for CmdError {
+    fn from(e: goharscribe_doc::DocError) -> Self {
         CmdError::Failed(e.to_string())
     }
 }

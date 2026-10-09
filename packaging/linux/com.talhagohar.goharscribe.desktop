@@ -1,14 +1,14 @@
 [Desktop Entry]
 Type=Application
-Name=WordCraft
+Name=GoharScribe
 GenericName=Word Processor
 Comment=Write and design documents; open and save Word files
-Exec=wordcraft %F
-TryExec=wordcraft
-Icon=ai.storyteller.wordcraft
+Exec=goharscribe %F
+TryExec=goharscribe
+Icon=com.talhagohar.goharscribe
 Terminal=false
 StartupNotify=true
-StartupWMClass=ai.storyteller.wordcraft
+StartupWMClass=com.talhagohar.goharscribe
 Categories=Office;WordProcessor;
 Keywords=word;processor;document;docx;writer;text;letter;report;
 MimeType=application/vnd.openxmlformats-officedocument.wordprocessingml.document;application/vnd.oasis.opendocument.text;application/rtf;text/markdown;text/html;text/plain;

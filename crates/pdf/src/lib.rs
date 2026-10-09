@@ -1,7 +1,7 @@
-//! WordCraft PDF export, written with `krilla`.
+//! GoharScribe PDF export, written with `krilla`.
 //!
 //! [`export`] lays the document out and draws each page's display list
-//! ([`wordcraft_layout::display::page_display`]) into a PDF page:
+//! ([`goharscribe_layout::display::page_display`]) into a PDF page:
 //!
 //! - **Text as real text:** glyph runs are written with embedded, subsetted fonts and a Unicode
 //!   mapping taken from the paragraph text, so text is selectable, searchable and extractable.
@@ -25,6 +25,12 @@ use std::collections::HashMap;
 use std::num::NonZeroU16;
 use std::sync::Arc;
 
+use goharscribe_doc::para::{InlineObject, ShapeKind};
+use goharscribe_doc::{Document, Path as DocPath, Rgb, StoryRef};
+use goharscribe_fonts::FaceRef;
+use goharscribe_geom::Rect;
+use goharscribe_layout::display::{DisplayOptions, Draw, Stroke as LineStyle, page_display};
+use goharscribe_layout::{DocLayout, LayoutCache, LayoutOptions, Page, Placed, layout};
 use krilla::action::{Action, LinkAction};
 use krilla::annotation::{Annotation, LinkAnnotation, Target};
 use krilla::color::rgb;
@@ -39,12 +45,6 @@ use krilla::paint::{Fill, FillRule, LineCap, Stroke, StrokeDash};
 use krilla::surface::Surface;
 use krilla::tagging::{Artifact, ArtifactType, ContentTag, Identifier, Node, SpanTag, Tag, TagGroup, TagKind, TagTree};
 use krilla::text::{Font, GlyphId, KrillaGlyph};
-use wordcraft_doc::para::{InlineObject, ShapeKind};
-use wordcraft_doc::{Document, Path as DocPath, Rgb, StoryRef};
-use wordcraft_fonts::FaceRef;
-use wordcraft_geom::Rect;
-use wordcraft_layout::display::{DisplayOptions, Draw, Stroke as LineStyle, page_display};
-use wordcraft_layout::{DocLayout, LayoutCache, LayoutOptions, Page, Placed, layout};
 
 /// Largest page side we write (200", the PDF limit).
 const MAX_SIDE: f32 = 14_400.0;
@@ -148,7 +148,7 @@ fn clamp_side(v: f32) -> f32 {
 
 fn metadata(doc: &Document, opts: &PdfOptions) -> Metadata {
     let c = &doc.core;
-    let mut m = Metadata::new().creator("WordCraft".into()).producer("WordCraft".into());
+    let mut m = Metadata::new().creator("GoharScribe".into()).producer("GoharScribe".into());
     let title = opts.title.clone().unwrap_or_else(|| c.title.clone());
     if !title.trim().is_empty() {
         m = m.title(title);
@@ -895,11 +895,11 @@ impl Exporter<'_> {
         Some(o)
     }
 
-    fn watermark(&mut self, s: &mut Surface, wm: &wordcraft_doc::Watermark, w: f32, h: f32) {
-        let r = wordcraft_fonts::word::resolve(&wm.font, false, false);
+    fn watermark(&mut self, s: &mut Surface, wm: &goharscribe_doc::Watermark, w: f32, h: f32) {
+        let r = goharscribe_fonts::word::resolve(&wm.font, false, false);
         let face = r.face;
         let text: String = wm.text.chars().take(200).collect();
-        let shaped = wordcraft_fonts::shape(&face, &text, &[], |c| c);
+        let shaped = goharscribe_fonts::shape(&face, &text, &[], |c| c);
         let upem = face.upem.max(1.0) as f32;
         let raw_w: f32 = shaped.iter().map(|g| g.x_advance as f32).sum::<f32>() / upem;
         if raw_w <= 0.0 || !raw_w.is_finite() {

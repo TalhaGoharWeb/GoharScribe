@@ -1,5 +1,5 @@
-//! WordCraft's egui front end: a Word-style window (title bar with Quick Access Toolbar, ribbon,
-//! rulers, page canvas, panes, status bar, Backstage, dialogs) over `wordcraft-engine`.
+//! GoharScribe's egui front end: a Word-style window (title bar with Quick Access Toolbar, ribbon,
+//! rulers, page canvas, panes, status bar, Backstage, dialogs) over `goharscribe-engine`.
 //!
 //! The UI is thin: it reads `Session` state and acts through [`WordApp::run`] (command ids), so
 //! the menus, ribbon, shortcuts, control channel and MCP all reach the same behaviour.
@@ -19,9 +19,9 @@ pub mod ribbon;
 pub mod theme;
 pub mod widgets;
 
+use goharscribe_engine::Session;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
-use wordcraft_engine::Session;
 
 pub use control::ControlRequest;
 
@@ -139,7 +139,7 @@ impl WordApp {
         if self.services.download.is_some() && matches!(id, "file.save" | "file.saveAs" | "file.exportPdf" | "file.exportPng") {
             let name = params.get("path").and_then(Value::as_str).map(str::to_string).unwrap_or_else(|| format!("{}.docx", self.title_stem()));
             let name = if id == "file.exportPdf" && !name.ends_with(".pdf") { format!("{name}.pdf") } else { name };
-            let bytes = wordcraft_engine::io::save_bytes(&name, &self.session.doc)?;
+            let bytes = goharscribe_engine::io::save_bytes(&name, &self.session.doc)?;
             if let Some(d) = &self.services.download {
                 d(&name, &bytes);
             }
@@ -239,8 +239,8 @@ impl WordApp {
                 self.open_dialog();
                 json!({})
             }
-            "ui.discord" => {
-                self.canvas.open_url = Some("https://discord.gg/artcraft".into());
+            "ui.github" => {
+                self.canvas.open_url = Some("https://github.com/TalhaGoharWeb/goharscribe".into());
                 json!({})
             }
             _ => return None,
@@ -385,7 +385,7 @@ impl WordApp {
         if let Some(url) = self.canvas.open_url.take() {
             ctx.open_url(egui::OpenUrl::new_tab(url));
         }
-        let title = format!("{}{} - WordCraft", self.title_stem(), if self.session.dirty { " •" } else { "" });
+        let title = format!("{}{} - GoharScribe", self.title_stem(), if self.session.dirty { " •" } else { "" });
         ctx.send_viewport_cmd(egui::ViewportCommand::Title(title));
         self.frame_ms = now_ms() - t0;
     }
@@ -396,7 +396,7 @@ impl WordApp {
         let files = std::mem::take(&mut *inbox.lock().unwrap_or_else(|e| e.into_inner()));
         for (name, bytes) in files {
             let lower = name.to_ascii_lowercase();
-            let data = wordcraft_engine::cmd::insert::base64_encode(&bytes);
+            let data = goharscribe_engine::cmd::insert::base64_encode(&bytes);
             let img = [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"].iter().any(|e| lower.ends_with(e));
             let r = if img { self.run("insert.picture", json!({"data": data})) } else { self.run("file.open", json!({"path": name, "data": data})) };
             if r.is_ok() {

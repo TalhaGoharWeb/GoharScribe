@@ -1,30 +1,30 @@
-//! `wordcraft-cli`: WordCraft from the command line.
+//! `goharscribe-cli`: GoharScribe from the command line.
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 
 use std::process::ExitCode;
 
+use goharscribe_engine::Session;
 use serde_json::{Value, json};
-use wordcraft_engine::Session;
 
 const USAGE: &str = "\
-wordcraft-cli — WordCraft from the command line
+goharscribe-cli — GoharScribe from the command line
 
 USAGE:
-  wordcraft-cli convert <in> <out>            convert between formats (docx, pdf, odt, rtf, html, md, txt, json, png)
-  wordcraft-cli info <file>                   pages, words, paragraphs, properties (JSON)
-  wordcraft-cli text <file>                   plain text
-  wordcraft-cli inspect <file>                document structure (JSON)
-  wordcraft-cli render <file> <out.png> [--page N] [--scale S]
-  wordcraft-cli run [--file F | --template T] --cmd 'id={json}' [--cmd …] [--save OUT] [--print]
+  goharscribe-cli convert <in> <out>            convert between formats (docx, pdf, odt, rtf, html, md, txt, json, png)
+  goharscribe-cli info <file>                   pages, words, paragraphs, properties (JSON)
+  goharscribe-cli text <file>                   plain text
+  goharscribe-cli inspect <file>                document structure (JSON)
+  goharscribe-cli render <file> <out.png> [--page N] [--scale S]
+  goharscribe-cli run [--file F | --template T] --cmd 'id={json}' [--cmd …] [--save OUT] [--print]
                                               run commands headlessly, then save
-  wordcraft-cli commands [--json]             list every command
-  wordcraft-cli parity [--markdown]           feature-catalog parity
-  wordcraft-cli mcp [--connect HOST:PORT]     MCP server on stdio (headless, or bridged to the app)
-  wordcraft-cli --version
+  goharscribe-cli commands [--json]             list every command
+  goharscribe-cli parity [--markdown]           feature-catalog parity
+  goharscribe-cli mcp [--connect HOST:PORT]     MCP server on stdio (headless, or bridged to the app)
+  goharscribe-cli --version
 ";
 
 fn open(path: &str) -> Result<Session, String> {
-    let doc = wordcraft_engine::io::open_path(std::path::Path::new(path))?;
+    let doc = goharscribe_engine::io::open_path(std::path::Path::new(path))?;
     let mut s = Session::new(doc);
     s.path = Some(path.into());
     Ok(s)
@@ -58,7 +58,7 @@ fn run(args: &[String]) -> Result<(), String> {
         }
         "text" => {
             let s = open(&pos(0)?)?;
-            println!("{}", s.doc.plain_text(wordcraft_doc::StoryRef::Body));
+            println!("{}", s.doc.plain_text(goharscribe_doc::StoryRef::Body));
             Ok(())
         }
         "inspect" => {
@@ -79,11 +79,11 @@ fn run(args: &[String]) -> Result<(), String> {
             let mut s = match (arg_value(&rest, "--file"), arg_value(&rest, "--template")) {
                 (Some(f), _) => open(&f)?,
                 (None, Some(t)) => {
-                    let mut s = Session::new(wordcraft_doc::Document::new());
+                    let mut s = Session::new(goharscribe_doc::Document::new());
                     s.run("file.new", &json!({"template": t})).map_err(|e| e.to_string())?;
                     s
                 }
-                _ => Session::new(wordcraft_doc::Document::new()),
+                _ => Session::new(goharscribe_doc::Document::new()),
             };
             let mut i = 0;
             while i < rest.len() {
@@ -121,7 +121,7 @@ fn run(args: &[String]) -> Result<(), String> {
             Ok(())
         }
         "commands" => {
-            let s = Session::new(wordcraft_doc::Document::new());
+            let s = Session::new(goharscribe_doc::Document::new());
             if rest.iter().any(|a| a == "--json") {
                 println!("{}", serde_json::to_string_pretty(&s.registry.describe()).unwrap_or_default());
             } else {
@@ -132,8 +132,8 @@ fn run(args: &[String]) -> Result<(), String> {
             Ok(())
         }
         "parity" => {
-            let s = Session::new(wordcraft_doc::Document::new());
-            let p = wordcraft_engine::catalog::parity(&s.registry);
+            let s = Session::new(goharscribe_doc::Document::new());
+            let p = goharscribe_engine::catalog::parity(&s.registry);
             if rest.iter().any(|a| a == "--markdown") {
                 print!("{}", parity_markdown(&p));
             } else {
@@ -142,16 +142,18 @@ fn run(args: &[String]) -> Result<(), String> {
             Ok(())
         }
         "mcp" => {
-            let backend: Box<dyn wordcraft_mcp::Backend> = match arg_value(&rest, "--connect") {
-                Some(addr) => Box::new(wordcraft_mcp::Remote::connect(&addr).map_err(|e| format!("can't reach the WordCraft app at {addr}: {e}"))?),
-                None => Box::new(wordcraft_mcp::Headless::default()),
+            let backend: Box<dyn goharscribe_mcp::Backend> = match arg_value(&rest, "--connect") {
+                Some(addr) => {
+                    Box::new(goharscribe_mcp::Remote::connect(&addr).map_err(|e| format!("can't reach the GoharScribe app at {addr}: {e}"))?)
+                }
+                None => Box::new(goharscribe_mcp::Headless::default()),
             };
-            let mut server = wordcraft_mcp::Server::new(backend);
+            let mut server = goharscribe_mcp::Server::new(backend);
             let stdin = std::io::stdin();
             server.serve(stdin.lock(), std::io::stdout()).map_err(|e| e.to_string())
         }
         "--version" | "-V" => {
-            println!("wordcraft-cli {}", env!("CARGO_PKG_VERSION"));
+            println!("goharscribe-cli {}", env!("CARGO_PKG_VERSION"));
             Ok(())
         }
         "" | "help" | "--help" | "-h" => {
@@ -164,7 +166,7 @@ fn run(args: &[String]) -> Result<(), String> {
 
 fn parity_markdown(p: &Value) -> String {
     let mut s = String::from(
-        "# WordCraft feature parity\n\nGenerated by `cargo xtask parity` (`wordcraft-cli parity --markdown`): the word-processor feature catalog (`crates/engine/src/catalog.rs`) compared with the live command registry.\n\n",
+        "# GoharScribe feature parity\n\nGenerated by `cargo xtask parity` (`goharscribe-cli parity --markdown`): the word-processor feature catalog (`crates/engine/src/catalog.rs`) compared with the live command registry.\n\n",
     );
     s += &format!(
         "**{} of {} catalog features have commands ({}%).**\n\n| Tab | Live | Total |\n|---|---|---|\n",
@@ -193,7 +195,7 @@ fn main() -> ExitCode {
     match run(&args) {
         Ok(()) => ExitCode::SUCCESS,
         Err(e) => {
-            eprintln!("wordcraft-cli: {e}");
+            eprintln!("goharscribe-cli: {e}");
             ExitCode::FAILURE
         }
     }

@@ -1,8 +1,8 @@
-//! WordCraft desktop app.
+//! GoharScribe desktop app.
 //!
-//! Usage: `wordcraft [--control <port>] [--sample] [files…]`
+//! Usage: `goharscribe [--control <port>] [--sample] [files…]`
 //!
-//! `--control <port>` (or `WORDCRAFT_CONTROL_PORT`) starts a localhost JSON-lines control server:
+//! `--control <port>` (or `GOHARSCRIBE_CONTROL_PORT`) starts a localhost JSON-lines control server:
 //! `{"id":1,"method":"engine.execute","params":{"command":"text.insert","params":{"text":"Hi"}}}`.
 //! See `docs/control-protocol.md`.
 #![cfg_attr(all(target_os = "windows", not(debug_assertions)), windows_subsystem = "windows")]
@@ -10,8 +10,8 @@
 
 mod control_server;
 
-use wordcraft_engine::Session;
-use wordcraft_ui_egui::{Services, UiState, WordApp};
+use goharscribe_engine::Session;
+use goharscribe_ui_egui::{Services, UiState, WordApp};
 
 struct App(WordApp);
 
@@ -35,20 +35,20 @@ impl eframe::App for App {
 
 fn prefs_path() -> Option<std::path::PathBuf> {
     let base = if cfg!(target_os = "macos") {
-        std::env::var_os("HOME").map(|h| std::path::PathBuf::from(h).join("Library/Application Support/WordCraft"))
+        std::env::var_os("HOME").map(|h| std::path::PathBuf::from(h).join("Library/Application Support/GoharScribe"))
     } else if cfg!(windows) {
-        std::env::var_os("APPDATA").map(|a| std::path::PathBuf::from(a).join("WordCraft"))
+        std::env::var_os("APPDATA").map(|a| std::path::PathBuf::from(a).join("GoharScribe"))
     } else {
         std::env::var_os("XDG_CONFIG_HOME")
             .map(std::path::PathBuf::from)
             .or_else(|| std::env::var_os("HOME").map(|h| std::path::PathBuf::from(h).join(".config")))
-            .map(|c| c.join("wordcraft"))
+            .map(|c| c.join("goharscribe"))
     };
     base.map(|b| b.join("ui.json"))
 }
 
 fn load_prefs(app: &mut WordApp) {
-    if std::env::var_os("WORDCRAFT_NO_PREFS").is_some() {
+    if std::env::var_os("GOHARSCRIBE_NO_PREFS").is_some() {
         return;
     }
     if let Some(p) = prefs_path()
@@ -61,7 +61,7 @@ fn load_prefs(app: &mut WordApp) {
 }
 
 fn save_prefs(app: &WordApp) {
-    if std::env::var_os("WORDCRAFT_NO_PREFS").is_some() {
+    if std::env::var_os("GOHARSCRIBE_NO_PREFS").is_some() {
         return;
     }
     if let Some(p) = prefs_path() {
@@ -95,14 +95,14 @@ fn services() -> Services {
 /// Window, Dock and taskbar icon.
 fn app_icon() -> Option<egui::IconData> {
     #[cfg(target_os = "macos")]
-    let png: &[u8] = include_bytes!("../../../assets/app-icon/wordcraft-macos-512.png");
+    let png: &[u8] = include_bytes!("../../../assets/app-icon/goharscribe-macos-512.png");
     #[cfg(not(target_os = "macos"))]
-    let png: &[u8] = include_bytes!("../../../assets/app-icon/hicolor/256x256/apps/ai.storyteller.wordcraft.png");
+    let png: &[u8] = include_bytes!("../../../assets/app-icon/hicolor/256x256/apps/com.talhagohar.goharscribe.png");
     eframe::icon_data::from_png_bytes(png).map_err(|e| log::warn!("app icon: {e}")).ok()
 }
 
 fn main() -> eframe::Result {
-    let mut control_port: Option<u16> = std::env::var("WORDCRAFT_CONTROL_PORT").ok().and_then(|p| p.parse().ok());
+    let mut control_port: Option<u16> = std::env::var("GOHARSCRIBE_CONTROL_PORT").ok().and_then(|p| p.parse().ok());
     let mut files = Vec::new();
     let mut sample = false;
     let mut args = std::env::args().skip(1);
@@ -112,9 +112,9 @@ fn main() -> eframe::Result {
             "--sample" => sample = true,
             "--version" => {
                 println!(
-                    "wordcraft {} ({})",
+                    "goharscribe {} ({})",
                     env!("CARGO_PKG_VERSION"),
-                    option_env!("WORDCRAFT_BUILD_SHA").map(|s| s.get(..8).unwrap_or(s)).unwrap_or("dev")
+                    option_env!("GOHARSCRIBE_BUILD_SHA").map(|s| s.get(..8).unwrap_or(s)).unwrap_or("dev")
                 );
                 return Ok(());
             }
@@ -123,8 +123,8 @@ fn main() -> eframe::Result {
     }
     let mut options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_title("WordCraft")
-            .with_app_id("ai.storyteller.wordcraft")
+            .with_title("GoharScribe")
+            .with_app_id("com.talhagohar.goharscribe")
             .with_inner_size([1440.0, 920.0])
             .with_min_inner_size([760.0, 480.0])
             .with_drag_and_drop(true)
@@ -137,10 +137,10 @@ fn main() -> eframe::Result {
         options.viewport = options.viewport.with_icon(icon);
     }
     eframe::run_native(
-        "WordCraft",
+        "GoharScribe",
         options,
         Box::new(move |cc| {
-            let doc = if sample { wordcraft_engine::sample::sample_document() } else { wordcraft_doc::Document::new() };
+            let doc = if sample { goharscribe_engine::sample::sample_document() } else { goharscribe_doc::Document::new() };
             let mut app = WordApp::new(Session::new(doc), services());
             load_prefs(&mut app);
             app.integrated_titlebar = cfg!(target_os = "macos");
@@ -150,7 +150,7 @@ fn main() -> eframe::Result {
             }
             for f in files {
                 if let Err(e) = app.run("file.open", serde_json::json!({"path": f})) {
-                    eprintln!("wordcraft: {f}: {e}");
+                    eprintln!("goharscribe: {f}: {e}");
                 }
             }
             Ok(Box::new(App(app)))

@@ -1,9 +1,9 @@
 //! Character formatting (Home › Font).
 
+use goharscribe_doc::Pos;
+use goharscribe_doc::props::{CharProps, Highlight, Rgb, TextColor, Underline, VertAlign};
+use goharscribe_doc::resolve::ResolvedChar;
 use serde_json::{Value, json};
-use wordcraft_doc::Pos;
-use wordcraft_doc::props::{CharProps, Highlight, Rgb, TextColor, Underline, VertAlign};
-use wordcraft_doc::resolve::ResolvedChar;
 
 use super::sel_result;
 use crate::{CmdError, CmdResult, CommandSpec, Session, p};

@@ -1,6 +1,6 @@
-# WordCraft roadmap
+# GoharScribe roadmap
 
-WordCraft aims for complete feature parity with Microsoft Word, then goes further on speed, openness
+GoharScribe aims for complete feature parity with Microsoft Word, then goes further on speed, openness
 and agent control. This file tracks where we are honestly. Generated numbers come from
 `cargo xtask parity` (`docs/parity.md`).
 
@@ -40,7 +40,7 @@ from a signed download, without losing work.
 | Real app icon / mascot art | placeholder; **needs owner art** |
 
 So: alpha is roughly **85% of the way**, with about **20–25 hours** of agent work left, plus two
-owner actions (push to `github.com/storytold/wordcraft` and enable the release secrets, and supply
+owner actions (push to `github.com/TalhaGoharWeb/goharscribe` and enable the release secrets, and supply
 the icon art).
 
 ## Parity by area

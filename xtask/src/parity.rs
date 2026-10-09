@@ -1,15 +1,15 @@
 //! `cargo xtask parity`: write docs/parity.md from the live command registry compared with the
-//! word-processor feature catalog (via `wordcraft-cli parity --markdown`).
+//! word-processor feature catalog (via `goharscribe-cli parity --markdown`).
 
 use std::path::Path;
 
 pub fn run(root: &Path) -> Result<(), String> {
     let out = crate::cargo()
-        .args(["run", "-q", "-p", "wordcraft-cli", "--", "parity", "--markdown"])
+        .args(["run", "-q", "-p", "goharscribe-cli", "--", "parity", "--markdown"])
         .output()
-        .map_err(|e| format!("cargo run wordcraft-cli: {e}"))?;
+        .map_err(|e| format!("cargo run goharscribe-cli: {e}"))?;
     if !out.status.success() {
-        return Err(format!("wordcraft-cli parity failed:\n{}", String::from_utf8_lossy(&out.stderr)));
+        return Err(format!("goharscribe-cli parity failed:\n{}", String::from_utf8_lossy(&out.stderr)));
     }
     let md = String::from_utf8_lossy(&out.stdout).to_string();
     let path = root.join("docs/parity.md");

@@ -1,18 +1,18 @@
 [package]
-name = "wordcraft-pdf"
+name = "goharscribe-pdf"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "WordCraft PDF export (krilla): embedded font subsets with selectable text, links, outline, tagging"
+description = "GoharScribe PDF export (krilla): embedded font subsets with selectable text, links, outline, tagging"
 
 [lints]
 workspace = true
 
 [dependencies]
-wordcraft-doc = { workspace = true }
-wordcraft-geom = { workspace = true }
-wordcraft-fonts = { workspace = true }
-wordcraft-layout = { workspace = true }
+goharscribe-doc = { workspace = true }
+goharscribe-geom = { workspace = true }
+goharscribe-fonts = { workspace = true }
+goharscribe-layout = { workspace = true }
 krilla = { workspace = true }
 image = { workspace = true }
 thiserror = { workspace = true }

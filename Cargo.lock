@@ -1533,6 +1533,213 @@ dependencies = [
 ]
 
 [[package]]
+name = "goharscribe"
+version = "0.1.0"
+dependencies = [
+ "eframe",
+ "egui",
+ "goharscribe-doc",
+ "goharscribe-engine",
+ "goharscribe-ui-egui",
+ "log",
+ "rfd",
+ "serde_json",
+ "winresource",
+]
+
+[[package]]
+name = "goharscribe-cli"
+version = "0.1.0"
+dependencies = [
+ "goharscribe-doc",
+ "goharscribe-engine",
+ "goharscribe-mcp",
+ "goharscribe-render",
+ "serde_json",
+]
+
+[[package]]
+name = "goharscribe-doc"
+version = "0.1.0"
+dependencies = [
+ "goharscribe-geom",
+ "proptest",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+ "unicode-segmentation",
+]
+
+[[package]]
+name = "goharscribe-docx"
+version = "0.1.0"
+dependencies = [
+ "goharscribe-doc",
+ "goharscribe-geom",
+ "image",
+ "log",
+ "proptest",
+ "quick-xml 0.38.4",
+ "thiserror 2.0.21",
+ "zip",
+]
+
+[[package]]
+name = "goharscribe-engine"
+version = "0.1.0"
+dependencies = [
+ "goharscribe-doc",
+ "goharscribe-docx",
+ "goharscribe-fonts",
+ "goharscribe-formats",
+ "goharscribe-geom",
+ "goharscribe-layout",
+ "goharscribe-pdf",
+ "goharscribe-proof",
+ "goharscribe-render",
+ "image",
+ "log",
+ "regex",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "goharscribe-fonts"
+version = "0.1.0"
+dependencies = [
+ "harfrust 0.13.3",
+ "kurbo",
+ "log",
+ "skrifa 0.47.0",
+ "unicode-bidi",
+]
+
+[[package]]
+name = "goharscribe-formats"
+version = "0.1.0"
+dependencies = [
+ "goharscribe-doc",
+ "goharscribe-geom",
+ "image",
+ "log",
+ "proptest",
+ "quick-xml 0.38.4",
+ "zip",
+]
+
+[[package]]
+name = "goharscribe-geom"
+version = "0.1.0"
+dependencies = [
+ "serde",
+]
+
+[[package]]
+name = "goharscribe-layout"
+version = "0.1.0"
+dependencies = [
+ "goharscribe-doc",
+ "goharscribe-fonts",
+ "goharscribe-geom",
+ "goharscribe-proof",
+ "log",
+ "serde",
+ "serde_json",
+ "unicode-linebreak",
+ "unicode-segmentation",
+]
+
+[[package]]
+name = "goharscribe-mcp"
+version = "0.1.0"
+dependencies = [
+ "goharscribe-doc",
+ "goharscribe-engine",
+ "goharscribe-render",
+ "log",
+ "serde_json",
+]
+
+[[package]]
+name = "goharscribe-pdf"
+version = "0.1.0"
+dependencies = [
+ "goharscribe-doc",
+ "goharscribe-fonts",
+ "goharscribe-geom",
+ "goharscribe-layout",
+ "hayro-cmap",
+ "hayro-interpret",
+ "hayro-syntax",
+ "image",
+ "krilla",
+ "kurbo",
+ "log",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "goharscribe-proof"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "miniz_oxide 0.8.9",
+ "proptest",
+]
+
+[[package]]
+name = "goharscribe-render"
+version = "0.1.0"
+dependencies = [
+ "goharscribe-doc",
+ "goharscribe-fonts",
+ "goharscribe-geom",
+ "goharscribe-layout",
+ "image",
+ "log",
+ "vello_cpu 0.2.0",
+]
+
+[[package]]
+name = "goharscribe-ui-egui"
+version = "0.1.0"
+dependencies = [
+ "egui",
+ "egui_kittest",
+ "goharscribe-doc",
+ "goharscribe-engine",
+ "goharscribe-fonts",
+ "goharscribe-geom",
+ "goharscribe-layout",
+ "goharscribe-render",
+ "image",
+ "log",
+ "serde",
+ "serde_json",
+ "toml",
+]
+
+[[package]]
+name = "goharscribe-web"
+version = "0.1.0"
+dependencies = [
+ "eframe",
+ "egui",
+ "goharscribe-doc",
+ "goharscribe-engine",
+ "goharscribe-ui-egui",
+ "js-sys",
+ "log",
+ "rfd",
+ "serde_json",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
+]
+
+[[package]]
 name = "gpu-allocator"
 version = "0.28.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4831,213 +5038,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1ebf944e87a7c253233ad6766e082e3cd714b5d03812acc24c318f549614536e"
 
 [[package]]
-name = "wordcraft"
-version = "0.3.0"
-dependencies = [
- "eframe",
- "egui",
- "log",
- "rfd",
- "serde_json",
- "winresource",
- "wordcraft-doc",
- "wordcraft-engine",
- "wordcraft-ui-egui",
-]
-
-[[package]]
-name = "wordcraft-cli"
-version = "0.3.0"
-dependencies = [
- "serde_json",
- "wordcraft-doc",
- "wordcraft-engine",
- "wordcraft-mcp",
- "wordcraft-render",
-]
-
-[[package]]
-name = "wordcraft-doc"
-version = "0.3.0"
-dependencies = [
- "proptest",
- "serde",
- "serde_json",
- "thiserror 2.0.21",
- "unicode-segmentation",
- "wordcraft-geom",
-]
-
-[[package]]
-name = "wordcraft-docx"
-version = "0.3.0"
-dependencies = [
- "image",
- "log",
- "proptest",
- "quick-xml 0.38.4",
- "thiserror 2.0.21",
- "wordcraft-doc",
- "wordcraft-geom",
- "zip",
-]
-
-[[package]]
-name = "wordcraft-engine"
-version = "0.3.0"
-dependencies = [
- "image",
- "log",
- "regex",
- "serde",
- "serde_json",
- "thiserror 2.0.21",
- "wordcraft-doc",
- "wordcraft-docx",
- "wordcraft-fonts",
- "wordcraft-formats",
- "wordcraft-geom",
- "wordcraft-layout",
- "wordcraft-pdf",
- "wordcraft-proof",
- "wordcraft-render",
-]
-
-[[package]]
-name = "wordcraft-fonts"
-version = "0.3.0"
-dependencies = [
- "harfrust 0.13.3",
- "kurbo",
- "log",
- "skrifa 0.47.0",
- "unicode-bidi",
-]
-
-[[package]]
-name = "wordcraft-formats"
-version = "0.3.0"
-dependencies = [
- "image",
- "log",
- "proptest",
- "quick-xml 0.38.4",
- "wordcraft-doc",
- "wordcraft-geom",
- "zip",
-]
-
-[[package]]
-name = "wordcraft-geom"
-version = "0.3.0"
-dependencies = [
- "serde",
-]
-
-[[package]]
-name = "wordcraft-layout"
-version = "0.3.0"
-dependencies = [
- "log",
- "serde",
- "serde_json",
- "unicode-linebreak",
- "unicode-segmentation",
- "wordcraft-doc",
- "wordcraft-fonts",
- "wordcraft-geom",
- "wordcraft-proof",
-]
-
-[[package]]
-name = "wordcraft-mcp"
-version = "0.3.0"
-dependencies = [
- "log",
- "serde_json",
- "wordcraft-doc",
- "wordcraft-engine",
- "wordcraft-render",
-]
-
-[[package]]
-name = "wordcraft-pdf"
-version = "0.3.0"
-dependencies = [
- "hayro-cmap",
- "hayro-interpret",
- "hayro-syntax",
- "image",
- "krilla",
- "kurbo",
- "log",
- "thiserror 2.0.21",
- "wordcraft-doc",
- "wordcraft-fonts",
- "wordcraft-geom",
- "wordcraft-layout",
-]
-
-[[package]]
-name = "wordcraft-proof"
-version = "0.3.0"
-dependencies = [
- "log",
- "miniz_oxide 0.8.9",
- "proptest",
-]
-
-[[package]]
-name = "wordcraft-render"
-version = "0.3.0"
-dependencies = [
- "image",
- "log",
- "vello_cpu 0.2.0",
- "wordcraft-doc",
- "wordcraft-fonts",
- "wordcraft-geom",
- "wordcraft-layout",
-]
-
-[[package]]
-name = "wordcraft-ui-egui"
-version = "0.3.0"
-dependencies = [
- "egui",
- "egui_kittest",
- "image",
- "log",
- "serde",
- "serde_json",
- "toml",
- "wordcraft-doc",
- "wordcraft-engine",
- "wordcraft-fonts",
- "wordcraft-geom",
- "wordcraft-layout",
- "wordcraft-render",
-]
-
-[[package]]
-name = "wordcraft-web"
-version = "0.3.0"
-dependencies = [
- "eframe",
- "egui",
- "js-sys",
- "log",
- "rfd",
- "serde_json",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "web-sys",
- "wordcraft-doc",
- "wordcraft-engine",
- "wordcraft-ui-egui",
-]
-
-[[package]]
 name = "write-fonts"
 version = "0.48.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5127,7 +5127,7 @@ checksum = "9440ea3e5aeabb0ac63af70daf835274065238cdd0cec83418f417eae38bacee"
 
 [[package]]
 name = "xtask"
-version = "0.3.0"
+version = "0.1.0"
 dependencies = [
  "serde_json",
 ]

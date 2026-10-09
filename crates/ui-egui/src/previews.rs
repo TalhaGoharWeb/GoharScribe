@@ -5,9 +5,9 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use egui::{Rect, Response, Sense, Stroke, TextureHandle, Ui, pos2, vec2};
+use goharscribe_doc::props::CharProps;
+use goharscribe_doc::{Block, Document, Paragraph, Table, para_block};
 use serde_json::{Value, json};
-use wordcraft_doc::props::CharProps;
-use wordcraft_doc::{Block, Document, Paragraph, Table, para_block};
 
 use crate::WordApp;
 use crate::theme::{Tokens, regular};
@@ -25,8 +25,8 @@ pub struct Previews {
 impl Previews {
     pub fn families(&mut self) -> Vec<String> {
         if self.families.is_none() {
-            let mut f: Vec<String> = wordcraft_fonts::FontDb::global().families().into_iter().filter(|f| !f.starts_with('.')).collect();
-            for w in [wordcraft_doc::styles::BODY_FONT, wordcraft_doc::styles::HEADING_FONT] {
+            let mut f: Vec<String> = goharscribe_fonts::FontDb::global().families().into_iter().filter(|f| !f.starts_with('.')).collect();
+            for w in [goharscribe_doc::styles::BODY_FONT, goharscribe_doc::styles::HEADING_FONT] {
                 if !f.iter().any(|x| x == w) {
                     f.push(w.to_string());
                 }
@@ -141,7 +141,7 @@ fn snippet_blocks(
     h: f32,
     ppp: f32,
     margin: f32,
-    paper: Option<wordcraft_doc::Rgb>,
+    paper: Option<goharscribe_doc::Rgb>,
 ) -> Option<egui::ColorImage> {
     let mut d = Document::new();
     d.styles = base.styles.clone();
@@ -153,13 +153,13 @@ fn snippet_blocks(
     d.last_section.margin_right = margin;
     d.last_section.margin_top = margin;
     d.last_section.margin_bottom = 0.0;
-    let l = wordcraft_layout::layout(&d, &mut wordcraft_layout::LayoutCache::new(), &Default::default());
+    let l = goharscribe_layout::layout(&d, &mut goharscribe_layout::LayoutCache::new(), &Default::default());
     let page = l.pages.first()?;
-    let mut opts = wordcraft_render::RenderOptions::default();
+    let mut opts = goharscribe_render::RenderOptions::default();
     if let Some(p) = paper {
         opts.paper = p;
     }
-    let img = wordcraft_render::render_area(&d, page, 0.0, 0.0, w + 2.0 * margin, h + margin, ppp, &opts);
+    let img = goharscribe_render::render_area(&d, page, 0.0, 0.0, w + 2.0 * margin, h + margin, ppp, &opts);
     let px = img.to_straight();
     Some(egui::ColorImage::from_rgba_unmultiplied([img.width as usize, img.height as usize], &px))
 }
@@ -190,7 +190,7 @@ pub fn style_gallery(app: &mut WordApp, ui: &mut Ui, state: &Value) {
         let tex = app.previews.get_or(ui.ctx(), &key, || {
             let mut p = Paragraph::with_text("AaBbCcDd", CharProps::default()).styled(id);
             p.props.space_before = Some(0.0);
-            p.props.align = Some(wordcraft_doc::Align::Left);
+            p.props.align = Some(goharscribe_doc::Align::Left);
             // Keep hanging indents (bullets) but start the first line at the tile's left edge.
             let first = doc.styles.resolve_para(&p.props).indent_first;
             p.props.indent_left = Some(if first.is_finite() { (-first).max(0.0) } else { 0.0 });
@@ -245,7 +245,7 @@ pub fn style_set_gallery(app: &mut WordApp, ui: &mut Ui) {
         }
         let key = format!("set:{name}:{ppp}");
         let tex = app.previews.get_or(ui.ctx(), &key, || {
-            let mut s = wordcraft_engine::Session::new(Document::new());
+            let mut s = goharscribe_engine::Session::new(Document::new());
             let _ = s.run("design.styleSet", &json!({"name": name}));
             let blocks = vec![
                 Block::Para(Paragraph::with_text("Title", CharProps::default()).styled("Title")),

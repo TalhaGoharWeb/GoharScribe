@@ -6,9 +6,9 @@ use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 
 use egui::{Color32, Pos2, Rect, Sense, Stroke, TextureHandle, Ui, pos2, vec2};
+use goharscribe_doc::{Pos, StoryRef};
+use goharscribe_layout::{DocLayout, Page, Placed};
 use serde_json::json;
-use wordcraft_doc::{Pos, StoryRef};
-use wordcraft_layout::{DocLayout, Page, Placed};
 
 use crate::WordApp;
 use crate::theme::{Tokens, regular, semibold};
@@ -75,7 +75,7 @@ pub struct Geometry {
 pub fn markup_width(app: &WordApp) -> f32 {
     let v = &app.session.view;
     // Word shows comments either in balloons (contextual) or in the Comments pane (list).
-    let on = v.show_markup && !v.comments_pane && !v.read_mode && !v.multi_page && v.mode == wordcraft_layout::ViewMode::Print;
+    let on = v.show_markup && !v.comments_pane && !v.read_mode && !v.multi_page && v.mode == goharscribe_layout::ViewMode::Print;
     if on && !app.session.doc.comments.is_empty() { 216.0 } else { 0.0 }
 }
 
@@ -84,7 +84,7 @@ pub fn geometry(app: &WordApp, l: &DocLayout, avail: egui::Vec2) -> Geometry {
     let markup = markup_width(app);
     let maxw = l.pages.iter().map(|p| p.w).fold(0.0f32, f32::max).max(72.0) + markup;
     let maxh = l.pages.iter().map(|p| p.h.min(20_000.0)).fold(0.0f32, f32::max).max(72.0);
-    let web = v.mode != wordcraft_layout::ViewMode::Print;
+    let web = v.mode != goharscribe_layout::ViewMode::Print;
     let mut scale = v.zoom.clamp(0.1, 5.0) * PX_PER_PT;
     let cols = if v.multi_page || v.read_mode { 2 } else { 1 };
     match v.fit.as_str() {
@@ -155,7 +155,7 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
     let t = Tokens::get(ui.ctx());
     let layout = app.session.layout();
     let full = ui.available_rect_before_wrap();
-    let show_ruler = app.session.view.ruler && app.session.view.mode == wordcraft_layout::ViewMode::Print && !app.session.view.read_mode;
+    let show_ruler = app.session.view.ruler && app.session.view.mode == goharscribe_layout::ViewMode::Print && !app.session.view.read_mode;
     let (hruler, vruler, area) = if show_ruler {
         let h = Rect::from_min_max(pos2(full.min.x + RULER, full.min.y), pos2(full.max.x, full.min.y + RULER));
         let v = Rect::from_min_max(pos2(full.min.x, full.min.y + RULER), pos2(full.min.x + RULER, full.max.y));
@@ -209,13 +209,13 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
             let key = page_key(app, page, scale_px);
             let fresh = app.canvas.textures.get(&i).is_some_and(|(k, _)| *k == key);
             if !fresh && (rendered < 2 || !app.canvas.textures.contains_key(&i) && rendered < 4) {
-                let mut opts = wordcraft_render::RenderOptions::default();
+                let mut opts = goharscribe_render::RenderOptions::default();
                 opts.display.marks = app.session.view.marks;
                 opts.display.markup = app.session.view.show_markup;
                 let editing_hf = matches!(app.session.sel.focus.story, StoryRef::Part(_));
                 opts.display.dim_header = !editing_hf;
                 opts.display.dim_body = editing_hf;
-                let img = wordcraft_render::render_page(&app.session.doc, page, scale_px, &opts);
+                let img = goharscribe_render::render_page(&app.session.doc, page, scale_px, &opts);
                 let px = img.to_straight();
                 let ci = egui::ColorImage::from_rgba_unmultiplied([img.width as usize, img.height as usize], &px);
                 match app.canvas.textures.get_mut(&i) {
@@ -333,7 +333,7 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
     {
         let (a, b) = app.session.sel.ordered();
         if !(a <= pos && pos <= b) || app.session.sel.is_collapsed() {
-            app.session.sel = wordcraft_engine::Selection::caret(pos);
+            app.session.sel = goharscribe_engine::Selection::caret(pos);
         }
         app.canvas.context_issue = app.session.run("review.suggestions", &json!({})).ok().filter(|v| !v.is_null());
         app.canvas.context_synonyms = app.session.run("review.thesaurus", &json!({})).ok().and_then(|v| v.get("synonyms").cloned());
@@ -361,7 +361,7 @@ fn balloons(app: &mut WordApp, ui: &mut Ui, painter: &egui::Painter, rects: &[Re
     let clip = ui.clip_rect();
     // (page, anchor x, anchor y, id) for each anchored, unresolved-or-not comment.
     let mut by_page: HashMap<usize, Vec<(f32, f32, u32, Pos)>> = HashMap::new();
-    for (id, pos) in wordcraft_engine::cmd::review::comment_list(&app.session) {
+    for (id, pos) in goharscribe_engine::cmd::review::comment_list(&app.session) {
         let Some(pos) = pos else { continue };
         let Some(c) = layout.caret_on(&pos, app.session.page_hint) else { continue };
         by_page.entry(c.page).or_default().push((c.x, c.top + c.height, id, pos));
@@ -427,7 +427,7 @@ fn balloons(app: &mut WordApp, ui: &mut Ui, painter: &egui::Painter, rects: &[Re
         }
     }
     if let Some(p) = clicked {
-        app.session.sel = wordcraft_engine::Selection::caret(p);
+        app.session.sel = goharscribe_engine::Selection::caret(p);
         app.canvas.want_focus = true;
     }
 }
@@ -470,14 +470,14 @@ fn mouse(app: &mut WordApp, ui: &Ui, resp: &egui::Response, rects: &[Rect], layo
             let _ = app.run(id, json!({}));
             let _ = s;
             if let Some(pos) = app.session.layout().hit(page, x, y, app.session.sel.focus.story) {
-                app.session.sel = wordcraft_engine::Selection::caret(pos);
+                app.session.sel = goharscribe_engine::Selection::caret(pos);
             }
             return;
         }
         if matches!(story, StoryRef::Part(_)) && layout.header_footer_at(page, y).is_none() {
             let _ = app.run("insert.closeHeader", json!({}));
             if let Some(pos) = layout.hit(page, x, y, StoryRef::Body) {
-                app.session.sel = wordcraft_engine::Selection::caret(pos);
+                app.session.sel = goharscribe_engine::Selection::caret(pos);
             }
             return;
         }
@@ -498,11 +498,11 @@ fn mouse(app: &mut WordApp, ui: &Ui, resp: &egui::Response, rects: &[Rect], layo
                     .doc
                     .parts
                     .get(&id)
-                    .is_some_and(|p| matches!(p.kind, wordcraft_doc::PartKind::Footnote | wordcraft_doc::PartKind::Endnote)) =>
+                    .is_some_and(|p| matches!(p.kind, goharscribe_doc::PartKind::Footnote | goharscribe_doc::PartKind::Endnote)) =>
             {
                 StoryRef::Part(id)
             }
-            Some(StoryRef::Body) if matches!(story, StoryRef::Part(id) if app.session.doc.parts.get(&id).is_some_and(|p| matches!(p.kind, wordcraft_doc::PartKind::Footnote | wordcraft_doc::PartKind::Endnote))) => {
+            Some(StoryRef::Body) if matches!(story, StoryRef::Part(id) if app.session.doc.parts.get(&id).is_some_and(|p| matches!(p.kind, goharscribe_doc::PartKind::Footnote | goharscribe_doc::PartKind::Endnote))) => {
                 StoryRef::Body
             }
             _ => story,
@@ -768,8 +768,8 @@ fn context_menu(app: &mut WordApp, ui: &mut Ui) {
                     let _ = app.run("select.word", json!({}));
                     let (a, b) = app.session.sel.ordered();
                     let trimmed = app.session.doc.para_at(&a).and_then(|p| p.text.get(a.off..b.off)).map(|t| t.trim_end().len()).unwrap_or(0);
-                    let end = wordcraft_doc::Pos { off: a.off + trimmed, ..b };
-                    app.session.sel = wordcraft_engine::Selection { anchor: a, focus: end };
+                    let end = goharscribe_doc::Pos { off: a.off + trimmed, ..b };
+                    app.session.sel = goharscribe_engine::Selection { anchor: a, focus: end };
                     let _ = app.run("text.insert", json!({"text": w, "raw": true}));
                     ui.close();
                 }

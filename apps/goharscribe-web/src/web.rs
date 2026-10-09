@@ -1,13 +1,13 @@
 //! The browser shell: web `Services`, drag-and-drop, and the eframe web runner.
 
+use goharscribe_engine::Session;
+use goharscribe_ui_egui::{Inbox, Services, WordApp};
 use wasm_bindgen::JsCast as _;
-use wordcraft_engine::Session;
-use wordcraft_ui_egui::{Inbox, Services, WordApp};
 
 const DOC_EXTS: &[&str] = &["docx", "docm", "dotx", "odt", "rtf", "txt", "md", "html", "htm", "json"];
 const IMAGE_EXTS: &[&str] = &["png", "jpg", "jpeg", "gif", "webp", "bmp"];
-const CANVAS_ID: &str = "wordcraft_canvas";
-const LOADING_ID: &str = "wordcraft_loading";
+const CANVAS_ID: &str = "goharscribe_canvas";
+const LOADING_ID: &str = "goharscribe_loading";
 
 pub fn start() {
     eframe::WebLogger::init(log::LevelFilter::Info).ok();
@@ -32,10 +32,11 @@ pub fn start() {
                 options,
                 Box::new(move |cc| {
                     if let Some(rs) = &cc.wgpu_render_state {
-                        log::info!("wordcraft-web: wgpu backend {:?}", rs.adapter.get_info().backend);
+                        log::info!("goharscribe-web: wgpu backend {:?}", rs.adapter.get_info().backend);
                     }
                     let inbox: Inbox = Inbox::default();
-                    let doc = if query().contains("sample") { wordcraft_engine::sample::sample_document() } else { wordcraft_doc::Document::new() };
+                    let doc =
+                        if query().contains("sample") { goharscribe_engine::sample::sample_document() } else { goharscribe_doc::Document::new() };
                     let mut app = WordApp::new(Session::new(doc), services(inbox.clone(), cc.egui_ctx.clone()));
                     app.autosave = false;
                     Ok(Box::new(WebShell { app, inbox }))
@@ -45,7 +46,7 @@ pub fn start() {
         if let Some(el) = document.get_element_by_id(LOADING_ID) {
             match result {
                 Ok(()) => el.remove(),
-                Err(e) => el.set_inner_html(&format!("<p>WordCraft failed to start: {e:?}</p><p>A browser with WebGPU or WebGL2 is required.</p>")),
+                Err(e) => el.set_inner_html(&format!("<p>GoharScribe failed to start: {e:?}</p><p>A browser with WebGPU or WebGL2 is required.</p>")),
             }
         }
     });

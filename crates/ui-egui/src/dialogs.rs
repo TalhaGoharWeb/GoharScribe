@@ -150,7 +150,7 @@ impl Dialog {
                 let rp = app.session.doc.para_at(&app.session.sel.focus).map(|p| app.session.doc.styles.resolve_para(&p.props));
                 let rp = rp?;
                 let line = match rp.line_spacing {
-                    wordcraft_doc::props::LineSpacing::Multiple(m) => m,
+                    goharscribe_doc::props::LineSpacing::Multiple(m) => m,
                     _ => 1.0,
                 };
                 Dialog::Paragraph {
@@ -179,7 +179,7 @@ impl Dialog {
             "goto" => Dialog::Goto { page: String::new() },
             "insertTable" => Dialog::InsertTable { rows: 2, cols: 5 },
             "pageSetup" => {
-                let sp = wordcraft_engine::cmd::page::sect(&app.session);
+                let sp = goharscribe_engine::cmd::page::sect(&app.session);
                 Dialog::PageSetup {
                     top: sp.margin_top / 72.0,
                     bottom: sp.margin_bottom / 72.0,
@@ -205,13 +205,13 @@ impl Dialog {
     pub fn modify_style(app: &WordApp, id: &str) -> Option<Dialog> {
         let st = app.session.doc.styles.get(id)?;
         let rc = app.session.doc.styles.resolve_char(
-            if st.kind == wordcraft_doc::StyleKind::Paragraph { Some(id) } else { None },
-            &wordcraft_doc::CharProps {
-                style: if st.kind == wordcraft_doc::StyleKind::Character { Some(id.into()) } else { None },
+            if st.kind == goharscribe_doc::StyleKind::Paragraph { Some(id) } else { None },
+            &goharscribe_doc::CharProps {
+                style: if st.kind == goharscribe_doc::StyleKind::Character { Some(id.into()) } else { None },
                 ..Default::default()
             },
         );
-        let rp = app.session.doc.styles.resolve_para(&wordcraft_doc::ParaProps { style: Some(id.into()), ..Default::default() });
+        let rp = app.session.doc.styles.resolve_para(&goharscribe_doc::ParaProps { style: Some(id.into()), ..Default::default() });
         Some(Dialog::ModifyStyle {
             id: id.into(),
             name: st.name.clone(),
@@ -220,8 +220,8 @@ impl Dialog {
             bold: rc.bold,
             italic: rc.italic,
             color: match rc.color {
-                wordcraft_doc::TextColor::Rgb(c) => c.hex(),
-                wordcraft_doc::TextColor::Auto => "auto".into(),
+                goharscribe_doc::TextColor::Rgb(c) => c.hex(),
+                goharscribe_doc::TextColor::Auto => "auto".into(),
             },
             before: rp.space_before,
             after: rp.space_after,
@@ -286,7 +286,7 @@ pub fn show(app: &mut WordApp, ctx: &egui::Context) {
         Dialog::NewStyle { .. } => "Create New Style",
         Dialog::ModifyStyle { .. } => "Modify Style",
         Dialog::Commands { .. } => "Search Commands",
-        Dialog::About { .. } => "About WordCraft",
+        Dialog::About { .. } => "About GoharScribe",
     };
     egui::Window::new(title).collapsible(false).resizable(false).anchor(egui::Align2::CENTER_CENTER, vec2(0.0, -40.0)).open(&mut open).show(
         ctx,
@@ -369,7 +369,7 @@ fn body(app: &mut WordApp, ui: &mut Ui, d: &mut Dialog) -> bool {
                 if let Ok(s) = size.trim().parse::<f64>() {
                     props["size"] = json!(s);
                 }
-                if let Some(c) = wordcraft_doc::Rgb::parse(color) {
+                if let Some(c) = goharscribe_doc::Rgb::parse(color) {
                     props["color"] = json!({"Rgb": [c.0, c.1, c.2]});
                 }
                 let _ = app.run("format.set", json!({"props": props}));
@@ -667,7 +667,7 @@ fn body(app: &mut WordApp, ui: &mut Ui, d: &mut Dialog) -> bool {
             let (ok, cancel) = buttons(ui, "OK");
             if ok {
                 let mut chr = json!({"font": font, "size": *size, "bold": *bold, "italic": *italic});
-                if let Some(c) = wordcraft_doc::Rgb::parse(color) {
+                if let Some(c) = goharscribe_doc::Rgb::parse(color) {
                     chr["color"] = json!({"Rgb": [c.0, c.1, c.2]});
                 }
                 let _ =
@@ -680,7 +680,7 @@ fn body(app: &mut WordApp, ui: &mut Ui, d: &mut Dialog) -> bool {
             r.request_focus();
             let q = query.to_lowercase();
             let reg = app.session.registry.clone();
-            let mut hits: Vec<&wordcraft_engine::CommandSpec> = reg
+            let mut hits: Vec<&goharscribe_engine::CommandSpec> = reg
                 .all()
                 .iter()
                 .filter(|c| {
@@ -715,20 +715,20 @@ fn body(app: &mut WordApp, ui: &mut Ui, d: &mut Dialog) -> bool {
                 1 => crate::credits::contributors_ui(ui),
                 2 => crate::credits::models_ui(ui),
                 _ => {
-                    ui.label(egui::RichText::new("WordCraft").font(semibold(22.0)));
+                    ui.label(egui::RichText::new("GoharScribe").font(semibold(22.0)));
                     ui.label(format!(
                         "Version {} ({})",
                         env!("CARGO_PKG_VERSION"),
-                        option_env!("WORDCRAFT_BUILD_SHA").map(|s| s.get(..8).unwrap_or(s)).unwrap_or("development build")
+                        option_env!("GOHARSCRIBE_BUILD_SHA").map(|s| s.get(..8).unwrap_or(s)).unwrap_or("development build")
                     ));
-                    ui.label("A free, open-source word processor written from scratch in Rust.\nPart of the Crafting Apps from the ArtCraft team.");
+                    ui.label("A free, open-source word processor written from scratch in Rust.\nBuilt for professional document design with first-class Urdu/Arabic RTL support.");
                     ui.add_space(6.0);
-                    ui.hyperlink_to("getartcraft.com/apps/wordcraft", "https://getartcraft.com/apps/wordcraft");
-                    ui.hyperlink_to("Join us on Discord: discord.gg/artcraft", "https://discord.gg/artcraft");
-                    ui.hyperlink_to("Source code: github.com/storytold/wordcraft", "https://github.com/storytold/wordcraft");
+                    ui.hyperlink_to("Source code: github.com/TalhaGoharWeb/goharscribe", "https://github.com/TalhaGoharWeb/goharscribe");
                     ui.add_space(6.0);
                     ui.label(
-                        egui::RichText::new("MIT OR Apache-2.0. Copyright (c) 2026 ArtCraft Team and the WordCraft contributors.").small().weak(),
+                        egui::RichText::new("MIT OR Apache-2.0. Copyright (c) 2026 GoharScribe Team and the GoharScribe contributors.")
+                            .small()
+                            .weak(),
                     );
                 }
             }

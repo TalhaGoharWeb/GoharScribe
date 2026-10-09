@@ -2,12 +2,12 @@
 
 use std::sync::Arc;
 
+use goharscribe_doc::edit::Fragment;
+use goharscribe_doc::props::CharProps;
+use goharscribe_doc::{Document, Path, Pos, StoryRef};
+use goharscribe_layout::{DocLayout, LayoutCache, LayoutOptions, ViewMode};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use wordcraft_doc::edit::Fragment;
-use wordcraft_doc::props::CharProps;
-use wordcraft_doc::{Document, Path, Pos, StoryRef};
-use wordcraft_layout::{DocLayout, LayoutCache, LayoutOptions, ViewMode};
 
 use crate::{CmdError, Registry};
 
@@ -122,7 +122,7 @@ pub struct Session {
     /// Author name for comments and tracked changes.
     pub author: String,
     /// Format painter: copied formatting waiting to be applied (and whether it stays on).
-    pub painter: Option<(CharProps, wordcraft_doc::props::ParaProps, bool)>,
+    pub painter: Option<(CharProps, goharscribe_doc::props::ParaProps, bool)>,
     /// Last message for the status bar / agents.
     pub status: String,
     history: Vec<Undo>,
@@ -173,7 +173,7 @@ impl Session {
             goal_x: None,
             page_hint: 0,
             registry: Arc::new(crate::cmd::registry()),
-            author: "WordCraft User".into(),
+            author: "GoharScribe User".into(),
             painter: None,
             status: String::new(),
             history: Vec::new(),
@@ -218,14 +218,14 @@ impl Session {
             return l.clone();
         }
         let opts = LayoutOptions { view: self.view.mode, web_width: ww, show_hidden: self.view.marks, proofing: self.view.proofing };
-        let l = Arc::new(wordcraft_layout::layout(&self.doc, &mut self.cache, &opts));
+        let l = Arc::new(goharscribe_layout::layout(&self.doc, &mut self.cache, &opts));
         self.layout = Some((self.rev, ww, self.view.mode, l.clone(), self.view.proofing));
         l
     }
     /// A layout for output (PDF, images, print): no proofing marks, print view.
     pub fn export_layout(&self) -> Arc<DocLayout> {
         let opts = LayoutOptions { view: ViewMode::Print, web_width: 0.0, show_hidden: false, proofing: false };
-        Arc::new(wordcraft_layout::layout(&self.doc, &mut LayoutCache::new(), &opts))
+        Arc::new(goharscribe_layout::layout(&self.doc, &mut LayoutCache::new(), &opts))
     }
 
     /// Invalidate the cached layout (fonts changed etc.).

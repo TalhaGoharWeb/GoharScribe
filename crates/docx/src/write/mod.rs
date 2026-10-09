@@ -5,9 +5,9 @@ mod story;
 
 use std::collections::{BTreeMap, HashMap};
 
-use wordcraft_doc::numbering::LevelSuffix;
-use wordcraft_doc::styles::{Style, StyleKind};
-use wordcraft_doc::{Blocks, Document, PartKind};
+use goharscribe_doc::numbering::LevelSuffix;
+use goharscribe_doc::styles::{Style, StyleKind};
+use goharscribe_doc::{Blocks, Document, PartKind};
 
 use crate::DocxError;
 use crate::package::{rt, zip_entries};
@@ -435,7 +435,7 @@ impl Writer<'_> {
         Some(rels.add(if footer { rt::FOOTER } else { rt::HEADER }, &file, false))
     }
 
-    fn take_para_id(&self, p: &wordcraft_doc::Paragraph) -> Option<String> {
+    fn take_para_id(&self, p: &goharscribe_doc::Paragraph) -> Option<String> {
         self.para_ids.get(&(p as *const _ as usize)).cloned()
     }
 
@@ -546,34 +546,37 @@ fn style_xml(w: &mut W, st: &Style) {
             props::borders(w, "w:tblBorders", b, Some("w:insideH"), &[]);
             w.close("w:tblPr");
         }
-        let cond =
-            |w: &mut W, ty: &str, chr: &wordcraft_doc::CharProps, fill: Option<wordcraft_doc::Rgb>, top: Option<&wordcraft_doc::props::Border>| {
-                if !props::has_rpr(chr) && fill.is_none() && top.is_none() {
-                    return;
+        let cond = |w: &mut W,
+                    ty: &str,
+                    chr: &goharscribe_doc::CharProps,
+                    fill: Option<goharscribe_doc::Rgb>,
+                    top: Option<&goharscribe_doc::props::Border>| {
+            if !props::has_rpr(chr) && fill.is_none() && top.is_none() {
+                return;
+            }
+            w.open("w:tblStylePr", &[("w:type", ty)]);
+            if props::has_rpr(chr) {
+                w.open("w:rPr", &[]);
+                props::rpr_inner(w, chr);
+                w.close("w:rPr");
+            }
+            if fill.is_some() || top.is_some() {
+                w.open("w:tcPr", &[]);
+                if let Some(b) = top {
+                    let bs = goharscribe_doc::props::Borders { top: Some(*b), ..Default::default() };
+                    props::borders(w, "w:tcBorders", &bs, None, &[]);
                 }
-                w.open("w:tblStylePr", &[("w:type", ty)]);
-                if props::has_rpr(chr) {
-                    w.open("w:rPr", &[]);
-                    props::rpr_inner(w, chr);
-                    w.close("w:rPr");
+                if let Some(f) = fill {
+                    w.empty("w:shd", &[("w:val", "clear"), ("w:color", "auto"), ("w:fill", &f.hex())]);
                 }
-                if fill.is_some() || top.is_some() {
-                    w.open("w:tcPr", &[]);
-                    if let Some(b) = top {
-                        let bs = wordcraft_doc::props::Borders { top: Some(*b), ..Default::default() };
-                        props::borders(w, "w:tcBorders", &bs, None, &[]);
-                    }
-                    if let Some(f) = fill {
-                        w.empty("w:shd", &[("w:val", "clear"), ("w:color", "auto"), ("w:fill", &f.hex())]);
-                    }
-                    w.close("w:tcPr");
-                }
-                w.close("w:tblStylePr");
-            };
+                w.close("w:tcPr");
+            }
+            w.close("w:tblStylePr");
+        };
         cond(w, "firstRow", &t.header_chr, t.header_fill, None);
         cond(w, "lastRow", &t.total_chr, None, t.total_border_top.as_ref());
         cond(w, "firstCol", &t.first_col_chr, None, None);
-        cond(w, "band1Horz", &wordcraft_doc::CharProps::default(), t.band_fill, None);
+        cond(w, "band1Horz", &goharscribe_doc::CharProps::default(), t.band_fill, None);
     }
     w.close("w:style");
 }
@@ -690,7 +693,7 @@ fn theme_xml(doc: &Document) -> Vec<u8> {
     w.open("a:themeElements", &[]);
     w.open("a:clrScheme", &[("name", name)]);
     for (i, n) in names.iter().enumerate() {
-        let c = s.theme_colors.get(i).or_else(|| wordcraft_doc::THEME_COLORS.get(i)).copied().unwrap_or_default();
+        let c = s.theme_colors.get(i).or_else(|| goharscribe_doc::THEME_COLORS.get(i)).copied().unwrap_or_default();
         w.open(&format!("a:{n}"), &[]);
         w.empty("a:srgbClr", &[("val", &c.hex())]);
         w.close(&format!("a:{n}"));
@@ -784,7 +787,7 @@ fn app_xml(doc: &Document) -> Vec<u8> {
             ("xmlns:vt", "http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes"),
         ],
     );
-    w.leaf("Application", &[], "WordCraft");
+    w.leaf("Application", &[], "GoharScribe");
     w.leaf("Words", &[], &doc.word_count().to_string());
     w.leaf("Paragraphs", &[], &doc.paragraph_count().to_string());
     w.leaf("DocSecurity", &[], "0");

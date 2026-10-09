@@ -2,20 +2,20 @@
 
 use std::sync::Arc;
 
-use wordcraft_doc::numbering::ListKind;
-use wordcraft_doc::para::{Anchor, Float, NoteKind, ShapeKind, Wrap};
-use wordcraft_doc::props::{
+use goharscribe_doc::numbering::ListKind;
+use goharscribe_doc::para::{Anchor, Float, NoteKind, ShapeKind, Wrap};
+use goharscribe_doc::props::{
     Align, Border, BorderStyle, Borders, CharProps, HeightRule, Highlight, LineSpacing, NumRef, ParaProps, Rgb, RowProps, TabAlign, TabLeader,
     TabStop, TableLook, TextColor, Underline, VAlign, VMerge, VertAlign,
 };
-use wordcraft_doc::section::{Columns, LineNumberRestart, LineNumbering, NumFormat, SectionProps, SectionStart};
-use wordcraft_doc::styles::{Style, StyleKind};
-use wordcraft_doc::table::{Cell, Table};
-use wordcraft_doc::{Block, Blocks, Comment, Document, InlineObject, Paragraph, PartKind, Revision, RevisionKind, Watermark, para_block};
+use goharscribe_doc::section::{Columns, LineNumberRestart, LineNumbering, NumFormat, SectionProps, SectionStart};
+use goharscribe_doc::styles::{Style, StyleKind};
+use goharscribe_doc::table::{Cell, Table};
+use goharscribe_doc::{Block, Blocks, Comment, Document, InlineObject, Paragraph, PartKind, Revision, RevisionKind, Watermark, para_block};
 
 fn rt(doc: &Document) -> Document {
-    let bytes = wordcraft_docx::write(doc).expect("write");
-    wordcraft_docx::read(&bytes).expect("read")
+    let bytes = goharscribe_docx::write(doc).expect("write");
+    goharscribe_docx::read(&bytes).expect("read")
 }
 
 fn paras(doc: &Document) -> Vec<&Paragraph> {
@@ -675,8 +675,8 @@ fn hostile_model_values_still_write() {
     d.body = vec![para_block(p)];
     d.media.insert("weird name/../x".into(), Arc::new(b"GIF89a....".to_vec()));
     d.media.insert("".into(), Arc::new(vec![0, 1, 2]));
-    let bytes = wordcraft_docx::write(&d).unwrap();
-    let r = wordcraft_docx::read(&bytes).unwrap();
+    let bytes = goharscribe_docx::write(&d).unwrap();
+    let r = goharscribe_docx::read(&bytes).unwrap();
     let t = paras(&r)[0].plain_text();
     assert!(t.contains("y<&>\"'"), "{t}");
     assert!(t.contains("raw") && t.contains("fallback"), "{t}");

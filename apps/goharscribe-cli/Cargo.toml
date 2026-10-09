@@ -1,0 +1,21 @@
+[package]
+name = "goharscribe-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = "GoharScribe command line: convert, inspect, render, run commands, MCP server"
+
+[[bin]]
+name = "goharscribe-cli"
+path = "src/main.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+goharscribe-doc = { workspace = true }
+goharscribe-engine = { workspace = true }
+goharscribe-render = { workspace = true }
+goharscribe-mcp = { workspace = true }
+serde_json = { workspace = true }

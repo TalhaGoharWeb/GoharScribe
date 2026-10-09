@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use egui::{Color32, CornerRadius, FontData, FontDefinitions, FontFamily, FontId, Stroke, Visuals};
 
-/// WordCraft's app colour (and its darker ink for text on light backgrounds).
+/// GoharScribe's app colour (and its darker ink for text on light backgrounds).
 pub const APP_COLOR: Color32 = Color32::from_rgb(0x3B, 0x5B, 0xDB);
 pub const APP_INK: Color32 = Color32::from_rgb(0x2B, 0x47, 0xB5);
 
@@ -143,7 +143,7 @@ pub fn install_fonts(ctx: &egui::Context) {
     }
     fonts.families.insert(FontFamily::Name("medium".into()), vec!["InterMedium".into(), "Inter".into(), "SourceSans".into()]);
     fonts.families.insert(FontFamily::Name("semibold".into()), vec!["InterSemiBold".into(), "Inter".into(), "SourceSans".into()]);
-    for f in wordcraft_fonts::japanese_ui_fonts(false).into_iter().take(1) {
+    for f in goharscribe_fonts::japanese_ui_fonts(false).into_iter().take(1) {
         fonts.font_data.insert("JpUi".into(), Arc::new(FontData::from_static(f.bytes)));
         for fam in [FontFamily::Proportional, FontFamily::Name("medium".into()), FontFamily::Name("semibold".into())] {
             if let Some(v) = fonts.families.get_mut(&fam) {
@@ -212,6 +212,6 @@ pub fn apply(ctx: &egui::Context, t: &Tokens) {
     });
 }
 
-pub fn c32(c: wordcraft_doc::Rgb) -> Color32 {
+pub fn c32(c: goharscribe_doc::Rgb) -> Color32 {
     Color32::from_rgb(c.0, c.1, c.2)
 }
