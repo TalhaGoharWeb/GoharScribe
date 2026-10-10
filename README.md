@@ -90,6 +90,9 @@ Every screenshot below is GoharScribe itself, rendered offscreen by its own UI t
 - **Private.** Spelling, grammar and everything else work offline.
 - **Open.** MIT OR Apache-2.0. Clean-room: built from public specifications and observation, with
   every asset original or openly licensed.
+- **Urdu/Arabic publishing.** Professional RTL document creation: mixed-direction BIDI layout,
+  Nastaleeq/Naskh typography, RTL-aware cover pages, headers/footers with first/even page support,
+  page borders, watermarks (including Urdu/Arabic presets), and DOCX round-trip fidelity.
 
 ## What works today
 
@@ -97,11 +100,12 @@ Every screenshot below is GoharScribe itself, rendered offscreen by its own UI t
 |---|---|
 | **Writing** | Fast typing with IME, smart quotes, AutoCorrect, list autoformat (`* `, `1. `), dashes; word, sentence, paragraph selection; drag-select; clipboard with formatting; undo/redo; find and replace with regex |
 | **Formatting** | Fonts, sizes, bold/italic/underline styles, strike, sub/superscript, caps, highlight, colours, character spacing, Format Painter, Change Case, Clear Formatting |
-| **Paragraphs** | Alignment, indents (draggable on the ruler), spacing, line spacing, tabs with leaders, borders, shading, keep with next, widow/orphan control |
+| **Paragraphs** | Alignment, indents (draggable on the ruler), spacing, line spacing, tabs with leaders, borders, shading, keep with next, widow/orphan control, contextual spacing, suppress hyphenation/line numbers, RTL-aware list labels |
 | **Styles** | Built-in style set, live gallery, Styles pane, create/modify/update styles, style sets, themes |
 | **Lists** | Bullets, numbering, multilevel, restart, set value, custom formats |
 | **Tables** | Insert by grid, merge/split, styles with banded rows, borders, shading, header rows repeated across pages, rows that split across pages, sort, formulas, text ↔ table |
-| **Pages** | Margins, orientation, size, columns, page/column/section breaks, headers and footers (first page, odd/even), page numbers, watermark, page borders, line numbers, vertical alignment, drop caps, automatic hyphenation |
+| **Pages** | Margins, orientation, size, columns, page/column/section breaks, headers and footers (first/even page authoring, Different First Page, Different Odd & Even), page numbers, watermarks (Urdu/Arabic presets, DOCX round-trip), page borders (7 styles), line numbers, vertical alignment, drop caps, automatic hyphenation |
+| **Urdu/Arabic** | Mixed-direction BIDI visual ordering (UAX #9), Nastaleeq/Naskh font shaping with ligatures and diacritics, RTL-aware cover page templates (Studio/Classic/Minimal), explicit RTL paragraph flag, DATE/TIME field evaluation |
 | **Objects** | Pictures (resize, crop, recolour, brightness/contrast, transparency, background removal, picture styles, rotate), shapes, text boxes, floating position with text wrapping (square, top and bottom, behind or in front of text) |
 | **References** | Table of contents, footnotes and endnotes, citations and bibliography (APA, MLA, Chicago, IEEE), captions, table of figures, cross-references, index, table of authorities |
 | **Review** | Spelling and grammar with suggestions, thesaurus, word count, comments in margin balloons or a pane, track changes, accept/reject, compare documents, restrict editing, accessibility checker, document inspector |
