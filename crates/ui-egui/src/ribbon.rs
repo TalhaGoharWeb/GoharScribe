@@ -424,6 +424,9 @@ fn insert(app: &mut GoharScribeApp, ui: &mut Ui) {
             mi(ui, app, "Blank (Three Columns)", "insert.header", json!({"preset": "blankThree"}));
             mi(ui, app, "Document Title", "insert.header", json!({"preset": "title"}));
             ui.separator();
+            mi(ui, app, "First Page Header", "insert.header", json!({"preset": "blank", "kind": "first"}));
+            mi(ui, app, "Even Page Header", "insert.header", json!({"preset": "blank", "kind": "even"}));
+            ui.separator();
             mi(ui, app, "Edit Header", "insert.editHeader", json!({}));
             mi(ui, app, "Remove Header", "insert.removeHeader", json!({}));
         });
@@ -431,6 +434,9 @@ fn insert(app: &mut GoharScribeApp, ui: &mut Ui) {
             mi(ui, app, "Blank", "insert.footer", json!({"preset": "blank"}));
             mi(ui, app, "Blank (Three Columns)", "insert.footer", json!({"preset": "blankThree"}));
             mi(ui, app, "Page Number", "insert.footer", json!({"preset": "pageNumber"}));
+            ui.separator();
+            mi(ui, app, "First Page Footer", "insert.footer", json!({"preset": "blank", "kind": "first"}));
+            mi(ui, app, "Even Page Footer", "insert.footer", json!({"preset": "blank", "kind": "even"}));
             ui.separator();
             mi(ui, app, "Edit Footer", "insert.editFooter", json!({}));
             mi(ui, app, "Remove Footer", "insert.removeFooter", json!({}));
@@ -441,6 +447,10 @@ fn insert(app: &mut GoharScribeApp, ui: &mut Ui) {
             mi(ui, app, "Page X of Y", "insert.pageNumber", json!({"position": "bottom", "format": "x of y"}));
             mi(ui, app, "Current Position", "insert.pageNumber", json!({"position": "current"}));
             mi(ui, app, "Format Page Numbers…", "layout.pageNumberFormat", json!({}));
+            ui.separator();
+            ui.label("Options:");
+            mi(ui, app, "Different First Page", "layout.differentFirstPage", json!({}));
+            mi(ui, app, "Different Odd & Even Pages", "layout.differentOddEven", json!({}));
         });
     });
     group(ui, "Text", None, app, |ui, app| {

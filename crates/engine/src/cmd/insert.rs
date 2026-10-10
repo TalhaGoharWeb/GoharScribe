@@ -36,8 +36,8 @@ pub fn specs() -> Vec<CommandSpec> {
             }
         })),
         CommandSpec::new("insert.bookmark", "Bookmark", "Insert › Links", bookmark).params(r#"{"name": string}"#),
-        CommandSpec::new("insert.header", "Header", "Insert › Header & Footer", |s, v| header_footer(s, v, true)).params(r#"{"text"?: string, "preset"?: "blank|blankThree|title"}"#),
-        CommandSpec::new("insert.footer", "Footer", "Insert › Header & Footer", |s, v| header_footer(s, v, false)).params(r#"{"text"?: string, "preset"?: "blank|blankThree|pageNumber"}"#),
+        CommandSpec::new("insert.header", "Header", "Insert › Header & Footer", |s, v| header_footer(s, v, true)).params(r#"{"text"?: string, "preset"?: "blank|blankThree|title", "kind"?: "default|first|even"}"#),
+        CommandSpec::new("insert.footer", "Footer", "Insert › Header & Footer", |s, v| header_footer(s, v, false)).params(r#"{"text"?: string, "preset"?: "blank|blankThree|pageNumber", "kind"?: "default|first|even"}"#),
         CommandSpec::new("insert.pageNumber", "Page Number", "Insert › Header & Footer", page_number).params(r#"{"position"?: "top|bottom|current", "align"?: "left|center|right", "format"?: "x of y"}"#),
         CommandSpec::new("insert.editHeader", "Edit Header", "Insert › Header & Footer › Header", |s, _| edit_hf(s, true)).pure(),
         CommandSpec::new("insert.editFooter", "Edit Footer", "Insert › Header & Footer › Footer", |s, _| edit_hf(s, false)).pure(),
@@ -60,6 +60,14 @@ pub fn specs() -> Vec<CommandSpec> {
         }),
         CommandSpec::new("insert.removeFooter", "Remove Footer", "Insert › Header & Footer › Footer", |s, _| {
             s.doc.last_section.footers = Default::default();
+            for path in s.doc.para_paths(StoryRef::Body) {
+                if s.doc.para(StoryRef::Body, &path).is_some_and(|p| p.section.is_some())
+                    && let Ok(p) = s.doc.para_mut(StoryRef::Body, &path)
+                    && let Some(sec) = p.section.as_mut()
+                {
+                    sec.footers = Default::default();
+                }
+            }
             sel_result(s)
         }),
         CommandSpec::new("insert.dateTime", "Date & Time", "Insert › Text", date_time).params(r#"{"format"?: "M/d/yyyy", "update"?: bool}"#),
@@ -340,26 +348,33 @@ fn bookmark(s: &mut Session, v: &Value) -> CmdResult {
     sel_result(s)
 }
 
-fn hf_part(s: &mut Session, header: bool) -> u32 {
+fn hf_part(s: &mut Session, header: bool, kind: &str) -> u32 {
     let block = s.sel.focus.path.0.first().copied().unwrap_or(0) as usize;
     let sect = s.doc.section_mut(block).clone();
-    let existing = if header { sect.headers.default } else { sect.footers.default };
+    let set = if header { &sect.headers } else { &sect.footers };
+    let existing = match kind {
+        "first" => set.first,
+        "even" => set.even,
+        _ => set.default,
+    };
     if let Some(id) = existing.filter(|id| s.doc.parts.contains_key(id)) {
         return id;
     }
     let style = if header { "Header" } else { "Footer" };
     let id = s.doc.add_part(if header { PartKind::Header } else { PartKind::Footer }, vec![para_block(Paragraph::new().styled(style))]);
     let sect = s.doc.section_mut(block);
-    if header {
-        sect.headers.default = Some(id);
-    } else {
-        sect.footers.default = Some(id);
+    let set = if header { &mut sect.headers } else { &mut sect.footers };
+    match kind {
+        "first" => set.first = Some(id),
+        "even" => set.even = Some(id),
+        _ => set.default = Some(id),
     }
     id
 }
 
 fn header_footer(s: &mut Session, v: &Value, header: bool) -> CmdResult {
-    let id = hf_part(s, header);
+    let kind = p::str(v, "kind").unwrap_or("default");
+    let id = hf_part(s, header, kind);
     let style = if header { "Header" } else { "Footer" };
     if let Some(text) = p::str(v, "text") {
         let blocks = text.split('\n').map(|l| para_block(Paragraph::with_text(l, CharProps::default()).styled(style))).collect();
@@ -389,7 +404,7 @@ fn header_footer(s: &mut Session, v: &Value, header: bool) -> CmdResult {
 }
 
 fn edit_hf(s: &mut Session, header: bool) -> CmdResult {
-    let id = hf_part(s, header);
+    let id = hf_part(s, header, "default");
     s.touch();
     s.sel = Selection::caret(s.doc.end_of(StoryRef::Part(id)));
     Ok(json!({"story": id}))
@@ -412,7 +427,7 @@ fn page_number(s: &mut Session, v: &Value) -> CmdResult {
         return sel_result(s);
     }
     let header = position == "top";
-    let id = hf_part(s, header);
+    let id = hf_part(s, header, "default");
     let mut para = Paragraph::new().styled(if header { "Header" } else { "Footer" });
     para.props.align = Some(align);
     para.props.tabs = Some(vec![TabStop { pos: 0.0, align: TabAlign::Clear, leader: Default::default() }]);
