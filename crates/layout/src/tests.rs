@@ -1,4 +1,5 @@
 use super::*;
+use std::sync::Arc;
 use goharscribe_doc::para::InlineObject;
 use goharscribe_doc::props::{Align, ParaProps};
 use goharscribe_doc::{Pos, Table};
@@ -511,6 +512,74 @@ fn bidi_hit_testing_roundtrip() {
             if let Some(back) = back {
                 assert_eq!(back, pos, "text={text:?} off={off}");
             }
+        }
+    }
+}
+
+#[test]
+fn bidi_mixed_visual_order() {
+    // Regression test: mixed-direction lines must follow UAX #9 visual order.
+    // "اردو 123 English" in an RTL paragraph must render (left to right):
+    // "English", "123", "اردو" — digits NOT reversed, Latin NOT mirrored.
+    let d = Document::from_text("اردو 123 English");
+    let l = lay(&d);
+    for it in &l.pages[0].items {
+        if let Placed::Lines { para, .. } = it {
+            assert!(!para.lines.is_empty());
+            let line = &para.lines[0];
+            // Collect (x, text) for each cluster, sort by x (visual order).
+            let text = "اردو 123 English";
+            let mut vis: Vec<(f32, &str)> = (line.c0..line.c1)
+                .map(|k| {
+                    let c = &para.clusters[k];
+                    let x = line.xs[k - line.c0];
+                    (x, &text[c.start..c.end])
+                })
+                .collect();
+            vis.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+            let visual_text: String = vis.iter().map(|(_, s)| *s).collect();
+            // Expected visual order (left to right): "English" + " " + "123" + " " + "ودرا"
+            // ("اردو" in RTL has ا rightmost, so left-to-right it reads و-د-ر-ا).
+            // Key assertions: "English" is NOT mirrored, "123" is NOT reversed.
+            assert_eq!(visual_text, "English 123 ودرا", "visual order wrong: {visual_text:?}");
+        }
+    }
+}
+
+#[test]
+fn bidi_explicit_flag_overrides_detection() {
+    // Regression test: para.rtl's explicit bidi flag must be honored by layout,
+    // even when the text starts with LTR characters.
+    use goharscribe_doc::{Paragraph, StoryRef};
+    let mut d = Document::new();
+    let mut p = Paragraph::with_text("Hello اردو", goharscribe_doc::props::CharProps::default());
+    p.props.bidi = Some(true);
+    d.story_mut(StoryRef::Body).unwrap().push(Arc::new(goharscribe_doc::Block::Para(p)));
+    let l = lay(&d);
+    for it in &l.pages[0].items {
+        if let Placed::Lines { para, .. } = it {
+            if para.text_len == 0 { continue; } // skip empty placeholder
+            assert!(para.base_rtl, "explicit bidi=true was ignored by layout");
+        }
+    }
+    // And explicit false must win over RTL text.
+    let mut d2 = Document::new();
+    let mut p2 = Paragraph::with_text("اردو hello", goharscribe_doc::props::CharProps::default());
+    p2.props.bidi = Some(false);
+    d2.story_mut(StoryRef::Body).unwrap().push(Arc::new(goharscribe_doc::Block::Para(p2)));
+    let l2 = lay(&d2);
+    for it in &l2.pages[0].items {
+        if let Placed::Lines { para, .. } = it {
+            if para.text_len == 0 { continue; } // skip empty placeholder
+            assert!(!para.base_rtl, "explicit bidi=false was ignored by layout");
+        }
+    }
+    // Unset flag falls back to first-strong-character detection.
+    let d3 = Document::from_text("اردو hello");
+    let l3 = lay(&d3);
+    for it in &l3.pages[0].items {
+        if let Placed::Lines { para, .. } = it {
+            assert!(para.base_rtl, "first-strong heuristic broke for RTL text");
         }
     }
 }

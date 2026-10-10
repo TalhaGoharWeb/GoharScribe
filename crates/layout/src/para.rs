@@ -128,9 +128,12 @@ pub struct ParaLayout {
     /// Sum of line heights (without space before/after).
     pub height: f32,
     pub text_len: usize,
-    /// True if the paragraph's base direction is RTL (first strong character).
+    /// True if the paragraph's base direction is RTL (explicit bidi flag or first strong character).
     /// Used for visual reordering of clusters (HIT-1).
     pub base_rtl: bool,
+    /// UAX #9 embedding level per cluster (index-aligned with `clusters`).
+    /// Used for visual reordering of mixed-direction lines.
+    pub bidi_levels: Vec<u8>,
     /// Paragraph contains fields whose text depends on the page.
     pub has_page_fields: bool,
     /// Note references (part id) in this paragraph, by cluster index.
@@ -559,13 +562,18 @@ pub fn layout_para(p: &Paragraph, env: &ParaEnv) -> ParaLayout {
         label,
         height: 0.0,
         text_len: p.text.len(),
-        base_rtl: is_rtl_paragraph(&p.text),
+        // Explicit bidi flag wins; fall back to first-strong-character heuristic.
+        base_rtl: false, // set below after bidi_levels is computed
+        bidi_levels: Vec::new(), // set below
         has_page_fields,
         notes,
         issues: if env.proofing { proof_issues(p) } else { Vec::new() },
         drop_cap,
         hyph_after: Vec::new(),
     };
+    // UAX #9 embedding levels per cluster; explicit bidi flag overrides text detection.
+    pl.bidi_levels = bidi_levels_for(&p.text, &pl.clusters);
+    pl.base_rtl = p.props.bidi.unwrap_or_else(|| is_rtl_paragraph(&p.text));
     pl.hyph_after = hyphenation_points(p, &pl, env.doc.settings.auto_hyphenation && !pl.rp.suppress_hyphens);
     for k in pl.hyph_after.clone() {
         if let Some(c) = pl.clusters.get_mut(k as usize) {
@@ -593,6 +601,28 @@ fn next_tab(x: f32, tabs: &[TabStop], default_tab: f32, hanging_at: Option<f32>)
     })
 }
 
+/// UAX #9 embedding level for each cluster, from the paragraph's direction runs.
+/// `levels[i]` is the level of `clusters[i]` (by the byte offset where the cluster starts).
+fn bidi_levels_for(text: &str, clusters: &[Cluster]) -> Vec<u8> {
+    if text.is_empty() || clusters.is_empty() {
+        return vec![0; clusters.len()];
+    }
+    let runs = goharscribe_fonts::direction_runs(text);
+    if runs.is_empty() {
+        return vec![0; clusters.len()];
+    }
+    // Runs are in logical order; walk them alongside clusters (also logical order).
+    let mut levels = vec![0u8; clusters.len()];
+    let mut run_idx = 0;
+    for (i, c) in clusters.iter().enumerate() {
+        while run_idx + 1 < runs.len() && c.start >= runs[run_idx].0.end {
+            run_idx += 1;
+        }
+        levels[i] = runs[run_idx].1;
+    }
+    levels
+}
+
 /// HIT-1: Reorder a line's x-positions into visual (BIDI) order.
 ///
 /// `xs` is indexed by logical cluster (`xs[k - c0]` = x of cluster `k`).
@@ -600,31 +630,54 @@ fn next_tab(x: f32, tabs: &[TabStop], default_tab: f32, hanging_at: Option<f32>)
 /// UAX #9 visual order, not logical order. This remaps the x-positions so hit
 /// testing (`off_at_x`) finds the correct logical offset.
 ///
+/// Implements UAX #9 rule L2 on the line's clusters: from the highest embedding
+/// level down to 1, reverse any contiguous sequence of clusters at that level
+/// or higher. The result is the visual (left-to-right) order of clusters; x
+/// positions are then assigned by walking that order and accumulating advances.
+///
 /// The `xs` values on entry are LTR positions (cumulative advances from
 /// `line_start_x`). We compute the visual order of clusters and reassign.
 fn apply_bidi_visual_order(pl: &ParaLayout, c0: usize, c1: usize, xs: Vec<f32>, line_start_x: f32) -> Vec<f32> {
     if c1 <= c0 || xs.len() < c1 - c0 {
         return xs;
     }
-    // For now, handle the pure-RTL paragraph case (all clusters RTL) by reversing.
-    // Mixed-direction lines need full UAX #9 visual reordering (future work).
-    if !pl.base_rtl {
+    let n = c1 - c0;
+    // Fast path: all clusters at level 0 (pure LTR) — nothing to reorder.
+    let levels = &pl.bidi_levels;
+    let all_ltr = (0..n).all(|i| levels.get(c0 + i).copied().unwrap_or(0) == 0);
+    if all_ltr {
         return xs;
     }
-    // Pure RTL: reverse the visual order.
-    // xs[k] is currently the LTR position. Compute total width and mirror.
-    let n = c1 - c0;
-    let total_w = xs.get(n).copied().unwrap_or(line_start_x) - line_start_x;
-    let mut out = vec![0.0; xs.len()];
-    for (i, slot) in out.iter_mut().enumerate().take(n) {
-        let ltr_x = xs.get(i).copied().unwrap_or(line_start_x);
-        let adv = pl.clusters.get(c0 + i).map(|c| c.adv).unwrap_or(0.0);
-        // Visual x = line_start + (total_w - (ltr_x - line_start) - adv)
-        *slot = line_start_x + (total_w - (ltr_x - line_start_x) - adv);
+    // UAX #9 L2: visual order of clusters (logical indices into c0..c1).
+    let mut vis: Vec<usize> = (0..n).collect();
+    let max_level = (0..n).map(|i| levels.get(c0 + i).copied().unwrap_or(0)).max().unwrap_or(0);
+    for level in (1..=max_level).rev() {
+        let mut i = 0;
+        while i < n {
+            if levels.get(c0 + vis[i]).copied().unwrap_or(0) >= level {
+                let mut j = i + 1;
+                while j < n && levels.get(c0 + vis[j]).copied().unwrap_or(0) >= level {
+                    j += 1;
+                }
+                vis[i..j].reverse();
+                i = j;
+            } else {
+                i += 1;
+            }
+        }
     }
-    // Keep the end x (last element) as-is (it's the line end).
-    if let (Some(&last), Some(slot)) = (xs.last(), out.last_mut()) {
-        *slot = last;
+    // Assign x positions in visual order, accumulating advances.
+    let mut out = vec![0.0; xs.len()];
+    let mut x = line_start_x;
+    for v in vis {
+        if let Some(slot) = out.get_mut(v) {
+            *slot = x;
+        }
+        x += pl.clusters.get(c0 + v).map(|c| c.adv).unwrap_or(0.0);
+    }
+    // Last element is the line end x.
+    if let Some(slot) = out.last_mut() {
+        *slot = x;
     }
     out
 }
