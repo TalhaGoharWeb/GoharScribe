@@ -381,3 +381,42 @@ fn m3_reject_all_removes_inserted_paragraph() {
     run(&mut s, "review.rejectAll", json!({}));
     assert_eq!(s.doc.body.len(), 1, "rejectAll should delete the inserted paragraph");
 }
+
+#[test]
+fn grow_shrink_font_on_selection() {
+    // Regression: Increase/Decrease Font Size buttons must change the selected text.
+    let mut s = s();
+    run(&mut s, "text.insert", json!({"text": "hello"}));
+    run(&mut s, "select.all", json!({}));
+    let before = run(&mut s, "format.state", json!({}));
+    let size_before = before.get("size").and_then(|v| v.as_f64()).unwrap_or(11.0);
+    run(&mut s, "format.growFont", json!({}));
+    let after = run(&mut s, "format.state", json!({}));
+    let size_after = after.get("size").and_then(|v| v.as_f64()).unwrap_or(11.0);
+    assert!(size_after > size_before, "growFont should increase size: {size_before} -> {size_after}");
+    run(&mut s, "format.shrinkFont", json!({}));
+    run(&mut s, "format.shrinkFont", json!({}));
+    let final_st = run(&mut s, "format.state", json!({}));
+    let size_final = final_st.get("size").and_then(|v| v.as_f64()).unwrap_or(11.0);
+    assert!(size_final < size_after, "shrinkFont should decrease size");
+}
+
+#[test]
+fn font_change_applies_to_urdu_selection() {
+    // Regression: changing font on selected Urdu text must apply to ALL of it,
+    // not just the last-written run.
+    let mut s = s();
+    run(&mut s, "text.insert", json!({"text": "اردو متن"}));
+    run(&mut s, "text.insert", json!({"text": " مزید"}));
+    run(&mut s, "select.all", json!({}));
+    run(&mut s, "format.font", json!({"name": "Noto Nastaliq Urdu"}));
+    // Verify every run in the paragraph has the new font.
+    let para = s.doc.para_at(&s.sel.focus).expect("paragraph");
+    for r in &para.runs {
+        assert_eq!(
+            r.props.font.as_deref(),
+            Some("Noto Nastaliq Urdu"),
+            "all runs should have the new font"
+        );
+    }
+}

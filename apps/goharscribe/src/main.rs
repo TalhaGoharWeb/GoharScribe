@@ -28,7 +28,7 @@ impl eframe::App for App {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         self.0.ui(ui);
     }
-    fn on_exit(&mut self) {
+    fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
         save_prefs(&self.0);
     }
 }
@@ -105,11 +105,13 @@ fn main() -> eframe::Result {
     let mut control_port: Option<u16> = std::env::var("GOHARSCRIBE_CONTROL_PORT").ok().and_then(|p| p.parse().ok());
     let mut files = Vec::new();
     let mut sample = false;
+    let mut use_glow = false;
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
         match a.as_str() {
             "--control" => control_port = args.next().and_then(|p| p.parse().ok()),
             "--sample" => sample = true,
+            "--glow" => use_glow = true,
             "--version" => {
                 println!(
                     "goharscribe {} ({})",
@@ -122,6 +124,11 @@ fn main() -> eframe::Result {
         }
     }
     let mut options = eframe::NativeOptions {
+        renderer: if use_glow {
+            eframe::Renderer::Glow
+        } else {
+            eframe::Renderer::Wgpu
+        },
         viewport: egui::ViewportBuilder::default()
             .with_title("GoharScribe")
             .with_app_id("com.talhagohar.goharscribe")

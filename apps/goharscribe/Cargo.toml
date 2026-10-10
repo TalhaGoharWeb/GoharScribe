@@ -14,7 +14,7 @@ workspace = true
 goharscribe-doc = { workspace = true }
 goharscribe-engine = { workspace = true }
 goharscribe-ui-egui = { workspace = true }
-eframe = { workspace = true, features = ["default_fonts", "wgpu", "accesskit", "wayland", "x11", "links"] }
+eframe = { workspace = true, features = ["default_fonts", "wgpu", "glow", "accesskit", "wayland", "x11", "links"] }
 egui = { workspace = true }
 serde_json = { workspace = true }
 log = { workspace = true }

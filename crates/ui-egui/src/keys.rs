@@ -81,10 +81,11 @@ pub fn key_name(k: Key) -> Option<&'static str> {
 
 fn combo(m: Modifiers, key: &str, with_shift: bool) -> String {
     let mut s = String::new();
-    if m.command {
+    // On Windows/Linux, Ctrl is the command modifier. Normalize to "Mod+" so it
+    // matches the registry's "Mod+..." shortcuts regardless of how egui sets the flags.
+    if m.command || (m.ctrl && !cfg!(target_os = "macos")) {
         s.push_str("Mod+");
-    }
-    if m.ctrl && !m.command {
+    } else if m.ctrl {
         s.push_str("Ctrl+");
     }
     if m.mac_cmd && m.ctrl {
