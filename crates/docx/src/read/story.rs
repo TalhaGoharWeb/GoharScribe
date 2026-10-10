@@ -57,6 +57,17 @@ pub struct StoryCtx {
     pending: Vec<InlineObject>,
     /// Text-box nesting depth.
     pub story_depth: usize,
+    /// Watermark textpath found in a header (v:textpath with string attribute).
+    pub watermark: Option<WatermarkData>,
+}
+
+/// Watermark data extracted from VML textpath in a header.
+#[derive(Clone, Debug)]
+pub struct WatermarkData {
+    pub text: String,
+    pub font: String,
+    pub color: Option<goharscribe_doc::Rgb>,
+    pub diagonal: bool,
 }
 
 /// Paragraph content under construction.
@@ -648,6 +659,28 @@ impl Reader<'_> {
             let media = self.media_for(rels, id)?;
             let alt = shape.attr("alt").or_else(|| img.attr("o:title")).unwrap_or("").to_string();
             return Some(InlineObject::Image { media, w, h, alt, float: Float::default(), crop: [0.0; 4] });
+        }
+        // Watermark: v:textpath with a string attribute (Word text watermark).
+        if let Some(tp) = shape.find("v:textpath") {
+            if let Some(text) = tp.attr("string") {
+                let tp_style = tp.attr("style").unwrap_or("");
+                // Extract font-family from style="font-family:&quot;Calibri&quot;;..."
+                let font = tp_style.split(';').find_map(|decl| {
+                    let mut kv = decl.splitn(2, ':');
+                    match (kv.next(), kv.next()) {
+                        (Some(k), Some(v)) if k.trim() == "font-family" => {
+                            Some(v.trim().trim_matches('"').trim_matches('\'').to_string())
+                        }
+                        _ => None,
+                    }
+                }).unwrap_or_else(|| "Calibri".to_string());
+                let fill = shape.find("v:fill");
+                let color = fill.and_then(|f| f.attr("color")).and_then(Rgb::parse);
+                // Diagonal if the SHAPE has a rotation style (Word uses rotation for diagonal).
+                let diagonal = style.contains("rotation");
+                sc.watermark = Some(WatermarkData { text: text.to_string(), font, color, diagonal });
+                return None; // Don't emit as an inline object; it's a watermark.
+            }
         }
         if let Some(t) = shape.find("w:txbxContent")
             && sc.story_depth < MAX_STORY_DEPTH

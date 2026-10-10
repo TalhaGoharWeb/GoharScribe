@@ -10,7 +10,7 @@ use goharscribe_doc::numbering::{AbstractNum, Level, LevelSuffix, Num};
 use goharscribe_doc::props::Rgb;
 use goharscribe_doc::section::NumFormat;
 use goharscribe_doc::styles::{Style, StyleKind, StyleSheet, TableStyleParts};
-use goharscribe_doc::{Blocks, Comment, Document, PartKind, Revision, RevisionKind};
+use goharscribe_doc::{Blocks, Comment, Document, PartKind, Revision, RevisionKind, Watermark};
 
 use crate::DocxError;
 use crate::package::{Package, Rels, rt};
@@ -235,6 +235,18 @@ impl Reader<'_> {
             && !blocks.is_empty()
         {
             p.blocks = blocks;
+        }
+        // If a watermark textpath was found in this header, store it in settings.
+        if !footer {
+            if let Some(wd) = sc.watermark {
+                self.doc.settings.watermark = Some(Watermark {
+                    text: wd.text,
+                    font: wd.font,
+                    color: wd.color.unwrap_or(Rgb(0xC0, 0xC0, 0xC0)),
+                    diagonal: wd.diagonal,
+                    semitransparent: true, // opacity not reliably in VML; default to semi
+                });
+            }
         }
         Some(id)
     }

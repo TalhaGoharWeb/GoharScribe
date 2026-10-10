@@ -7,11 +7,33 @@ use std::collections::{BTreeMap, HashMap};
 
 use goharscribe_doc::numbering::LevelSuffix;
 use goharscribe_doc::styles::{Style, StyleKind};
-use goharscribe_doc::{Blocks, Document, PartKind};
+use goharscribe_doc::{Blocks, Document, PartKind, Watermark};
 
 use crate::DocxError;
 use crate::package::{rt, zip_entries};
 use crate::xml::{self, W};
+
+/// Generate VML watermark shape XML for a header part.
+/// Word stores watermarks as a VML textpath shape in the header.
+fn watermark_vml(wm: &Watermark) -> String {
+    let color = format!("#{:02x}{:02x}{:02x}", wm.color.0, wm.color.1, wm.color.2);
+    let opacity = if wm.semitransparent { ".35" } else { ".8" };
+    let rotation = if wm.diagonal { "rotation:315;" } else { "" };
+    // Escape the text for XML attribute.
+    let text = wm.text.replace('&', "&amp;").replace('<', "&lt;").replace('"', "&quot;");
+    let font = wm.font.replace('"', "&quot;");
+    format!(
+        "<w:p><w:r><w:rPr><w:noProof/></w:rPr><w:pict>\
+        <v:shapetype id=\"_x0000_t136\" coordsize=\"21600,21600\" o:spt=\"136\" adj=\"10800\" path=\"m@7,l@8,m@5,21600l@6,21600e\">\
+        <v:formulas><v:f eqn=\"sum #0 0 10800\"/><v:f eqn=\"prod #0 2 1\"/><v:f eqn=\"sum 21600 0 @1\"/><v:f eqn=\"sum 0 0 @2\"/><v:f eqn=\"sum 21600 0 @3\"/><v:f eqn=\"if @0 @3 0\"/><v:f eqn=\"if @0 21600 @1\"/><v:f eqn=\"if @0 0 @2\"/><v:f eqn=\"if @0 @4 21600\"/><v:f eqn=\"mid @5 @6\"/><v:f eqn=\"mid @8 @5\"/><v:f eqn=\"mid @7 @8\"/><v:f eqn=\"mid @6 @7\"/><v:f eqn=\"sum @6 0 @5\"/></v:formulas>\
+        <v:path textpathok=\"t\" o:connecttype=\"custom\" o:connectlocs=\"@9,0;@10,10800;@11,21600\" o:connectangles=\"270,180,90\"/>\
+        <v:textpath on=\"t\" fitshape=\"t\"/><v:handles><v:h position=\"#0,bottomRight\" xrange=\"6629,14971\"/></v:handles>\
+        <o:lock v:ext=\"edit\" text=\"t\" shapetype=\"t\"/></v:shapetype>\
+        <v:shape id=\"GoharScribeWatermark\" type=\"#_x0000_t136\" style=\"position:absolute;margin-left:0;margin-top:0;width:468pt;height:96pt;{rotation}\" o:allowincell=\"f\" fillcolor=\"{color}\" stroked=\"f\">\
+        <v:fill opacity=\"{opacity}\" color=\"{color}\"/><v:textpath style=\"font-family:&quot;{font}&quot;;font-size:1pt\" on=\"t\" fitshape=\"t\" string=\"{text}\"/>\
+        </v:shape></w:pict></w:r></w:p>"
+    )
+}
 
 /// Relationships of one part.
 #[derive(Default)]
@@ -76,6 +98,25 @@ const CT_WML: &str = "application/vnd.openxmlformats-officedocument.wordprocessi
 
 /// Write a `.docx` package.
 pub fn write(doc: &Document) -> Result<Vec<u8>, DocxError> {
+    // If a watermark exists but the document has no header, create a minimal
+    // header part so the watermark VML has a home (Word requires watermarks
+    // to live in a header part referenced from sectPr).
+    let owned;
+    let doc = if doc.settings.watermark.is_some() {
+        let mut d = doc.clone();
+        let has_default_header = d.sections().iter().any(|(_, s)| s.headers.default.is_some())
+            || d.last_section.headers.default.is_some();
+        if !has_default_header {
+            let hid = d.add_part(PartKind::Header, Blocks::new());
+            d.last_section.headers.default = Some(hid);
+            // Also set on section breaks so the header persists across sections.
+            // (sections() returns SectionProps refs; last_section covers the final section.)
+        }
+        owned = d;
+        &owned
+    } else {
+        doc
+    };
     let mut wr = Writer {
         doc,
         media_files: BTreeMap::new(),
@@ -124,6 +165,11 @@ pub fn write(doc: &Document) -> Result<Vec<u8>, DocxError> {
     let body = w.into_bytes();
 
     // Headers and footers (discovered while writing sections).
+    // If a watermark exists but no header was created, inject the watermark
+    // into the first header; if no header exists at all, the watermark is
+    // written into a new minimal header part (see below).
+    let watermark = doc.settings.watermark.clone();
+    let mut watermark_injected = false;
     let mut done = 0;
     while let Some((id, file, footer)) = wr.hf.get(done).cloned() {
         done += 1;
@@ -131,6 +177,13 @@ pub fn write(doc: &Document) -> Result<Vec<u8>, DocxError> {
         let mut w = W::new();
         let tag = if footer { "w:ftr" } else { "w:hdr" };
         w.open(tag, &ns_refs);
+        // Inject watermark VML into the first (default) header.
+        if !footer && !watermark_injected {
+            if let Some(wm) = &watermark {
+                w.s.push_str(&watermark_vml(wm));
+                watermark_injected = true;
+            }
+        }
         let blocks: Blocks = doc.parts.get(&id).map(|p| p.blocks.clone()).unwrap_or_default();
         wr.blocks(&mut w, &blocks, &mut prels, false, 0);
         w.close(tag);

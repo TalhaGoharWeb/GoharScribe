@@ -573,10 +573,25 @@ fn settings_core_theme_round_trip() {
     let r = rt(&d);
     assert_eq!(r.settings, d.settings);
     assert_eq!(r.core, d.core);
-    // Watermarks aren't stored in DOCX by this crate (yet).
+    // Watermarks round-trip via VML textpath in the header.
     let mut w = d.clone();
     w.settings.watermark = Some(Watermark::default());
-    assert_eq!(rt(&w).settings.watermark, None);
+    let rw = rt(&w).settings.watermark.expect("watermark should round-trip");
+    assert_eq!(rw.text, "DRAFT");
+    assert_eq!(rw.diagonal, true);
+    // Custom watermark with Urdu text.
+    let mut w2 = d.clone();
+    w2.settings.watermark = Some(Watermark {
+        text: "مسودہ".to_string(),
+        font: "Noto Nastaliq Urdu".to_string(),
+        color: Rgb(0xFF, 0x00, 0x00),
+        diagonal: false,
+        semitransparent: true,
+    });
+    let rw2 = rt(&w2).settings.watermark.expect("Urdu watermark should round-trip");
+    assert_eq!(rw2.text, "مسودہ");
+    assert_eq!(rw2.font, "Noto Nastaliq Urdu");
+    assert_eq!(rw2.diagonal, false);
 }
 
 /// A document that uses everything, for second-generation stability checks.
