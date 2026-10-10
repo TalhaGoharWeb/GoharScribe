@@ -583,3 +583,37 @@ fn bidi_explicit_flag_overrides_detection() {
         }
     }
 }
+
+#[test]
+fn bidi_mixed_hit_testing_roundtrip() {
+    // Mixed-direction hit testing: caret -> x -> offset should roundtrip.
+    let cases = ["اردو 123 English", "Hello اردو world"];
+    for text in cases {
+        let d = Document::from_text(text);
+        let l = lay(&d);
+        // Test offsets at cluster boundaries.
+        for it in &l.pages[0].items {
+            if let Placed::Lines { para, .. } = it {
+                for line in &para.lines {
+                    for k in line.c0..=line.c1.min(line.c0 + 10) {
+                        let off = if k < line.c1 {
+                            para.clusters.get(k).map(|c| c.start).unwrap_or(0)
+                        } else {
+                            line.stop
+                        };
+                        let pos = Pos::body(0, off);
+                        let c = l.caret(&pos);
+                        if let Some(c) = c {
+                            let back = l.hit(c.page, c.x + 0.1, c.top + c.height / 2.0, StoryRef::Body);
+                            // Allow off-by-one at direction boundaries (caret affinity).
+                            if let Some(back) = back {
+                                let diff = (back.off as i32 - off as i32).abs();
+                                assert!(diff <= 2, "text={text:?} off={off} -> back={} (diff {diff})", back.off);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
