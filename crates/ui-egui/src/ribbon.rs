@@ -559,7 +559,13 @@ fn design(app: &mut GoharScribeApp, ui: &mut Ui) {
             }
         });
         menu_button(ui, app, "pageBorders", Some("Page\nBorders"), "Page Borders", true, |ui, app| {
-            mi(ui, app, "Box", "design.pageBorders", json!({"kind": "box"}));
+            ui.label("Style:");
+            mi(ui, app, "Single Box", "design.pageBorders", json!({"kind": "box", "style": "single"}));
+            mi(ui, app, "Double Box", "design.pageBorders", json!({"kind": "box", "style": "double"}));
+            mi(ui, app, "Dotted Box", "design.pageBorders", json!({"kind": "box", "style": "dotted"}));
+            mi(ui, app, "Dashed Box", "design.pageBorders", json!({"kind": "box", "style": "dashed"}));
+            mi(ui, app, "Thick Box", "design.pageBorders", json!({"kind": "box", "style": "thick"}));
+            ui.separator();
             mi(ui, app, "None", "design.pageBorders", json!({"kind": "none"}));
         });
     });

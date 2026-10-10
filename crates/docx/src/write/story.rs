@@ -618,7 +618,8 @@ impl Writer<'_> {
             ],
         );
         if let Some(b) = &s.page_borders {
-            borders(w, "w:pgBorders", b, None, &[("w:offsetFrom", "text")]);
+            // Layout measures page borders from the page edge (Word's default "page").
+            borders(w, "w:pgBorders", b, None, &[("w:offsetFrom", "page")]);
         }
         if let Some(l) = &s.line_numbers {
             let restart = match l.restart {

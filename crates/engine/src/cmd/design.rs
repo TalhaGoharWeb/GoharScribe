@@ -78,12 +78,23 @@ pub fn specs() -> Vec<CommandSpec> {
             let kind = p::str(v, "kind").unwrap_or("box");
             let w = p::f32(v, "width").unwrap_or(1.0).clamp(0.25, 6.0);
             let color = p::str(v, "color").and_then(Rgb::parse);
-            let b = Border { style: BorderStyle::Single, width: w, color, space: 24.0 };
+            let style = match p::str(v, "style").unwrap_or("single") {
+                "double" => BorderStyle::Double,
+                "dotted" => BorderStyle::Dotted,
+                "dashed" => BorderStyle::Dashed,
+                "thick" => BorderStyle::Thick,
+                "triple" => BorderStyle::Triple,
+                "dotdash" => BorderStyle::DotDash,
+                "wave" => BorderStyle::Wave,
+                _ => BorderStyle::Single,
+            };
+            let space = p::f32(v, "space").unwrap_or(24.0).clamp(0.0, 72.0);
+            let b = Border { style, width: w, color, space };
             let block = s.sel.focus.path.0.first().copied().unwrap_or(0) as usize;
             s.doc.section_mut(block).page_borders = if kind == "none" { None } else { Some(Borders::box_(b)) };
             sel_result(s)
         })
-        .params(r#"{"kind": "box|none", "width"?: pt, "color"?: "RRGGBB"}"#),
+        .params(r#"{"kind": "box|none", "style"?: "single|double|dotted|dashed|thick|triple|dotdash|wave", "width"?: pt, "color"?: "RRGGBB", "space"?: pt}"#),
         CommandSpec::new("design.setDefault", "Set as Default", "Design › Document Formatting", |s, _| {
             s.status = "These settings will be used for new documents.".into();
             sel_result(s)
