@@ -755,7 +755,6 @@ fn break_lines(pl: &mut ParaLayout, env: &ParaEnv, mark_style: u16, suffix: Opti
             if pl.base_rtl {
                 let right = (width - rp.indent_right).max(1.0);
                 lab.x = right - lab.width;
-                x = right;
             } else {
                 lab.x = left;
             }
