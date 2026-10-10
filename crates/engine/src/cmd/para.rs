@@ -115,6 +115,9 @@ pub fn specs() -> Vec<CommandSpec> {
         CommandSpec::new("para.sort", "Sort", "Home › Paragraph", sort).params(r#"{"descending"?: bool}"#),
         CommandSpec::new("para.keepNext", "Keep with Next", "Home › Paragraph › Line and Page Breaks", |s, v| tog(s, v, |p| p.keep_next, |p, b| p.keep_next = Some(b))),
         CommandSpec::new("para.keepLines", "Keep Lines Together", "Home › Paragraph › Line and Page Breaks", |s, v| tog(s, v, |p| p.keep_lines, |p, b| p.keep_lines = Some(b))),
+        CommandSpec::new("para.contextualSpacing", "Don't Add Space Between Same-Style Paragraphs", "Home › Paragraph › Line and Page Breaks", |s, v| tog(s, v, |p| p.contextual_spacing, |p, b| p.contextual_spacing = Some(b))),
+        CommandSpec::new("para.suppressHyphens", "Don't Hyphenate", "Home › Paragraph › Line and Page Breaks", |s, v| tog(s, v, |p| p.suppress_hyphens, |p, b| p.suppress_hyphens = Some(b))),
+        CommandSpec::new("para.suppressLineNumbers", "Suppress Line Numbers", "Home › Paragraph › Line and Page Breaks", |s, v| tog(s, v, |p| p.suppress_line_numbers, |p, b| p.suppress_line_numbers = Some(b))),
         CommandSpec::new("para.pageBreakBefore", "Page Break Before", "Home › Paragraph › Line and Page Breaks", |s, v| {
             tog(s, v, |p| p.page_break_before, |p, b| p.page_break_before = Some(b))
         }),

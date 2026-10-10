@@ -751,7 +751,14 @@ fn break_lines(pl: &mut ParaLayout, env: &ParaEnv, mark_style: u16, suffix: Opti
         let mut x = left;
         // Label on the first line.
         if first && let Some(lab) = pl.label.as_mut() {
-            lab.x = left;
+            // RTL: mirror the label to the right side.
+            if pl.base_rtl {
+                let right = (width - rp.indent_right).max(1.0);
+                lab.x = right - lab.width;
+                x = right;
+            } else {
+                lab.x = left;
+            }
             let end = left + lab.width;
             x = match suffix.unwrap_or(LevelSuffix::Tab) {
                 LevelSuffix::Tab => {
