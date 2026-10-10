@@ -128,6 +128,9 @@ pub struct ParaLayout {
     /// Sum of line heights (without space before/after).
     pub height: f32,
     pub text_len: usize,
+    /// True if the paragraph's base direction is RTL (first strong character).
+    /// Used for visual reordering of clusters (HIT-1).
+    pub base_rtl: bool,
     /// Paragraph contains fields whose text depends on the page.
     pub has_page_fields: bool,
     /// Note references (part id) in this paragraph, by cluster index.
@@ -252,19 +255,32 @@ impl<'a> Builder<'a> {
             let k = st.size / st.face.upem.max(1.0) as f32;
             let hscale = rc.scale / 100.0;
             // Group glyphs by cluster byte offset; graphemes may span several shaper clusters.
+            // Note: `shaped` is in VISUAL order (BIDI-1), but `g.cluster` is the LOGICAL byte
+            // offset. Group by logical cluster first, then emit clusters in logical order.
+            // The line breaker reorders into visual order for x-positioning.
             let bounds: Vec<usize> = unicode_segmentation::UnicodeSegmentation::grapheme_indices(sub, true).map(|(i, _)| i).collect();
-            let mut gi = 0usize;
+            // Map logical cluster start -> glyphs (in visual order within the cluster).
+            let mut by_cluster: std::collections::BTreeMap<usize, Vec<(u32, f32, f32, f32)>> = std::collections::BTreeMap::new();
+            for g in &shaped {
+                by_cluster.entry(g.cluster).or_default().push((g.gid, g.x_offset as f32, g.y_offset as f32, g.x_advance as f32));
+            }
             for (bi, &gs) in bounds.iter().enumerate() {
                 let ge = bounds.get(bi + 1).copied().unwrap_or(sub.len());
                 let g0 = self.glyphs.len() as u32;
                 let mut adv = 0.0f32;
-                while let Some(g) = shaped.get(gi) {
-                    if g.cluster >= ge {
-                        break;
+                // Collect glyphs whose logical cluster falls in [gs, ge).
+                // A shaper cluster may span grapheme boundaries; assign by cluster start.
+                let mut to_take: Vec<usize> = Vec::new();
+                for (&cs, _) in by_cluster.range(gs..ge) {
+                    to_take.push(cs);
+                }
+                for cs in to_take {
+                    if let Some(glyphs) = by_cluster.remove(&cs) {
+                        for (gid, xo, yo, xa) in glyphs {
+                            self.glyphs.push(Glyph { gid, dx: adv + xo * k * hscale, dy: yo * k });
+                            adv += xa * k * hscale;
+                        }
                     }
-                    self.glyphs.push(Glyph { gid: g.gid, dx: adv + g.x_offset as f32 * k * hscale, dy: g.y_offset as f32 * k });
-                    adv += g.x_advance as f32 * k * hscale;
-                    gi += 1;
                 }
                 let g1 = self.glyphs.len() as u32;
                 let s = sub.get(gs..ge).unwrap_or("");
@@ -331,6 +347,23 @@ impl<'a> Builder<'a> {
 }
 
 /// Lay out one paragraph.
+/// HIT-1: Determine if a paragraph's base direction is RTL.
+/// Uses the first strong directional character (UAX #9 P2/P3).
+fn is_rtl_paragraph(text: &str) -> bool {
+    for c in text.chars() {
+        // Strong RTL: Hebrew, Arabic, and related blocks.
+        if ('\u{0590}'..='\u{08FF}').contains(&c) || ('\u{FB1D}'..='\u{FDFF}').contains(&c) || ('\u{FE70}'..='\u{FEFF}').contains(&c) {
+            return true;
+        }
+        // Strong LTR: Latin, etc.
+        if c.is_ascii_alphabetic() || ('\u{0041}'..='\u{024F}').contains(&c) {
+            return false;
+        }
+        // Skip neutrals (spaces, punctuation, numbers) - continue to next char.
+    }
+    false
+}
+
 pub fn layout_para(p: &Paragraph, env: &ParaEnv) -> ParaLayout {
     let doc = env.doc;
     let mut rp = doc.styles.resolve_para(&p.props);
@@ -526,6 +559,7 @@ pub fn layout_para(p: &Paragraph, env: &ParaEnv) -> ParaLayout {
         label,
         height: 0.0,
         text_len: p.text.len(),
+        base_rtl: is_rtl_paragraph(&p.text),
         has_page_fields,
         notes,
         issues: if env.proofing { proof_issues(p) } else { Vec::new() },
@@ -557,6 +591,42 @@ fn next_tab(x: f32, tabs: &[TabStop], default_tab: f32, hanging_at: Option<f32>)
         let n = ((x + 0.01) / d).floor() + 1.0;
         TabStop { pos: (n * d).min(1e6), align: TabAlign::Left, leader: TabLeader::None }
     })
+}
+
+/// HIT-1: Reorder a line's x-positions into visual (BIDI) order.
+///
+/// `xs` is indexed by logical cluster (`xs[k - c0]` = x of cluster `k`).
+/// For RTL or mixed-direction text, clusters must be positioned according to
+/// UAX #9 visual order, not logical order. This remaps the x-positions so hit
+/// testing (`off_at_x`) finds the correct logical offset.
+///
+/// The `xs` values on entry are LTR positions (cumulative advances from
+/// `line_start_x`). We compute the visual order of clusters and reassign.
+fn apply_bidi_visual_order(pl: &ParaLayout, c0: usize, c1: usize, xs: Vec<f32>, line_start_x: f32) -> Vec<f32> {
+    if c1 <= c0 || xs.len() < c1 - c0 {
+        return xs;
+    }
+    // For now, handle the pure-RTL paragraph case (all clusters RTL) by reversing.
+    // Mixed-direction lines need full UAX #9 visual reordering (future work).
+    if !pl.base_rtl {
+        return xs;
+    }
+    // Pure RTL: reverse the visual order.
+    // xs[k] is currently the LTR position. Compute total width and mirror.
+    let n = c1 - c0;
+    let total_w = xs.get(n).copied().unwrap_or(line_start_x) - line_start_x;
+    let mut out = vec![0.0; xs.len()];
+    for (i, slot) in out.iter_mut().enumerate().take(n) {
+        let ltr_x = xs.get(i).copied().unwrap_or(line_start_x);
+        let adv = pl.clusters.get(c0 + i).map(|c| c.adv).unwrap_or(0.0);
+        // Visual x = line_start + (total_w - (ltr_x - line_start) - adv)
+        *slot = line_start_x + (total_w - (ltr_x - line_start_x) - adv);
+    }
+    // Keep the end x (last element) as-is (it's the line end).
+    if let (Some(&last), Some(slot)) = (xs.last(), out.last_mut()) {
+        *slot = last;
+    }
+    out
 }
 
 fn break_lines(pl: &mut ParaLayout, env: &ParaEnv, mark_style: u16, suffix: Option<LevelSuffix>) {
@@ -913,6 +983,9 @@ fn break_lines(pl: &mut ParaLayout, env: &ParaEnv, mark_style: u16, suffix: Opti
         }
         let start = pl.clusters.get(c0).map(|c| c.start).unwrap_or(pl.text_len);
         let stop = if c1 > c0 { pl.clusters.get(c1 - 1).map(|c| c.end).unwrap_or(pl.text_len) } else { start };
+        // HIT-1: Reorder x-positions for visual (BIDI) order. Clusters are in logical
+        // order; for RTL text they must be positioned right-to-left.
+        let xs = apply_bidi_visual_order(pl, c0, c1, xs, line_start_x);
         lines.push(Line { top, height, baseline, c0, c1, xs, leaders, end, start, stop, left, right: right_edge, hyphen });
         top += height;
         first = false;

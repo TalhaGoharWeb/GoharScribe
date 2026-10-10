@@ -86,7 +86,9 @@ pub fn is_rtl(c: char) -> bool {
 /// Maximal runs of one embedding level (UAX #9): (byte range, level). Odd levels are RTL.
 /// Uses the `unicode-bidi` crate for proper bidi algorithm implementation, handling
 /// neutrals, numbers, and embeddings correctly.
-fn direction_runs(text: &str) -> Vec<(std::ops::Range<usize>, u8)> {
+/// UAX #9 direction runs: (byte range, embedding level) in logical order.
+/// Public for layout (visual reordering of clusters).
+pub fn direction_runs(text: &str) -> Vec<(std::ops::Range<usize>, u8)> {
     use unicode_bidi::BidiInfo;
     if text.is_empty() {
         return Vec::new();

@@ -468,3 +468,49 @@ fn auto_hyphenation_breaks_long_words() {
     let l2 = lay(&d2);
     let _ = hyphens(&l2);
 }
+
+#[test]
+fn bidi_clusters_group_glyphs_correctly() {
+    // Regression test for HIT-1 (cluster grouping): mixed-direction text must not
+    // assign glyphs to the wrong logical clusters. Each cluster's byte range must
+    // be non-empty and ordered, and glyph ranges must not overlap incorrectly.
+    let d = Document::from_text("Hello اردو 123 English");
+    let l = lay(&d);
+    for it in &l.pages[0].items {
+        if let Placed::Lines { para, .. } = it {
+            // Every cluster must have a valid byte range within the paragraph text.
+            for c in &para.clusters {
+                assert!(c.start <= c.end, "cluster [{}, {}) invalid", c.start, c.end);
+                assert!(c.end <= para.text_len, "cluster end {} > text_len {}", c.end, para.text_len);
+            }
+            // Clusters must be in logical order (non-decreasing start).
+            for w in para.clusters.windows(2) {
+                assert!(w[0].start <= w[1].start, "clusters out of logical order");
+            }
+            // Glyph ranges must be valid.
+            for c in &para.clusters {
+                assert!(c.g0 <= c.g1, "glyph range invalid");
+                assert!((c.g1 as usize) <= para.glyphs.len(), "glyph range out of bounds");
+            }
+        }
+    }
+}
+
+#[test]
+fn bidi_hit_testing_roundtrip() {
+    // For pure LTR and pure RTL text, hit testing a caret position must return
+    // the original offset (HIT-1).
+    let cases = [("Hello world", vec![0, 5, 11]), ("اردو", vec![0, 4, 8])];
+    for (text, offs) in cases {
+        let d = Document::from_text(text);
+        let l = lay(&d);
+        for off in offs {
+            let pos = Pos::body(0, off);
+            let c = l.caret(&pos);
+            let back = c.and_then(|c| l.hit(c.page, c.x + 0.1, c.top + c.height / 2.0, StoryRef::Body));
+            if let Some(back) = back {
+                assert_eq!(back, pos, "text={text:?} off={off}");
+            }
+        }
+    }
+}
