@@ -1,0 +1,38 @@
+[package]
+name = "goharscribe-server"
+description = "GoharScribe SaaS backend: multi-user document API with auth (L5)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[lib]
+name = "goharscribe_server"
+path = "src/lib.rs"
+
+[[bin]]
+name = "goharscribe-server"
+path = "src/main.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+goharscribe-engine = { workspace = true }
+goharscribe-doc = { workspace = true }
+axum = { workspace = true }
+tokio = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+rusqlite = { workspace = true }
+jsonwebtoken = { workspace = true }
+argon2 = { workspace = true }
+rand_core = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+thiserror = { workspace = true }
+log = { workspace = true }
+
+[dev-dependencies]

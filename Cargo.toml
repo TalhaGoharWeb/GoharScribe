@@ -23,8 +23,21 @@ goharscribe-pdf = { path = "crates/pdf" }
 goharscribe-proof = { path = "crates/proof" }
 goharscribe-engine = { path = "crates/engine" }
 goharscribe-mcp = { path = "crates/mcp" }
+goharscribe-server = { path = "crates/server" }
 goharscribe-ui-egui = { path = "crates/ui-egui" }
 goharscribe-input = { path = "crates/input" }
+
+# SaaS backend
+axum = { version = "0.7", features = ["json"] }
+tokio = { version = "1", features = ["full"] }
+tower = { version = "0.4", features = ["util"] }
+tower-http = { version = "0.5", features = ["cors", "fs"] }
+rusqlite = { version = "0.31", features = ["bundled"] }
+jsonwebtoken = "9"
+argon2 = "0.5"
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+rand_core = { version = "0.6", features = ["getrandom"] }
 
 # foundation
 kurbo = { version = "0.13", features = ["serde"] }
