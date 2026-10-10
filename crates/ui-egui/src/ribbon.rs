@@ -302,6 +302,10 @@ fn home(app: &mut GoharScribeApp, ui: &mut Ui) {
                 small(ui, app, "alignRight", None, "Align Right", "para.alignRight", json!({}), align == A::Right);
                 small(ui, app, "justify", None, "Justify", "para.justify", json!({}), align == A::Justify);
                 ui.add_space(4.0);
+                let rtl = rp.as_ref().map(|r| r.bidi).unwrap_or(false);
+                small(ui, app, "ltr", None, "Left-to-Right", "para.rtl", json!({"value": false}), !rtl);
+                small(ui, app, "rtl", None, "Right-to-Left", "para.rtl", json!({"value": true}), rtl);
+                ui.add_space(4.0);
                 menu_button(ui, app, "lineSpacing", None, "Line and Paragraph Spacing", false, |ui, app| {
                     for v in [1.0, 1.15, 1.5, 2.0, 2.5, 3.0] {
                         mi(ui, app, &format!("{v}"), "para.lineSpacing", json!({"value": v}));

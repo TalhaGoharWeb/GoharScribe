@@ -420,3 +420,21 @@ fn font_change_applies_to_urdu_selection() {
         );
     }
 }
+
+#[test]
+fn para_rtl_toggle() {
+    // RTL/LTR toggle on the Home tab: para.rtl sets bidi and alignment.
+    let mut s = s();
+    run(&mut s, "text.insert", json!({"text": "hello"}));
+    // Default is LTR.
+    let p0 = s.doc.para_at(&s.sel.focus).expect("para");
+    assert!(!p0.props.bidi.unwrap_or(false), "default should be LTR");
+    // Switch to RTL.
+    run(&mut s, "para.rtl", json!({"value": true}));
+    let p1 = s.doc.para_at(&s.sel.focus).expect("para");
+    assert_eq!(p1.props.bidi, Some(true), "bidi should be true after RTL");
+    // Switch back to LTR.
+    run(&mut s, "para.rtl", json!({"value": false}));
+    let p2 = s.doc.para_at(&s.sel.focus).expect("para");
+    assert_eq!(p2.props.bidi, Some(false), "bidi should be false after LTR");
+}
