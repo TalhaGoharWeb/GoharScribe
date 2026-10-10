@@ -68,7 +68,7 @@ pub fn specs() -> Vec<CommandSpec> {
         CommandSpec::new("design.paragraphSpacing", "Paragraph Spacing", "Design › Document Formatting", para_spacing)
             .params(r#"{"value": "default|none|compact|tight|open|relaxed|double"}"#),
         CommandSpec::new("design.watermark", "Watermark", "Design › Page Background", watermark)
-            .params(r#"{"text"?: string, "remove"?: bool, "diagonal"?: bool, "color"?: "RRGGBB"}"#),
+            .params(r#"{"text"?: string, "remove"?: bool, "diagonal"?: bool, "color"?: "RRGGBB", "font"?: string, "semitransparent"?: bool}"#),
         CommandSpec::new("design.pageColor", "Page Color", "Design › Page Background", |s, v| {
             s.doc.settings.page_color = p::str(v, "color").and_then(Rgb::parse);
             sel_result(s)
@@ -227,6 +227,14 @@ fn watermark(s: &mut Session, v: &Value) -> CmdResult {
     }
     if let Some(c) = p::str(v, "color").and_then(Rgb::parse) {
         wm.color = c;
+    }
+    if let Some(f) = p::str(v, "font") {
+        if !f.is_empty() && f.len() <= 100 {
+            wm.font = f.to_string();
+        }
+    }
+    if let Some(st) = p::bool(v, "semitransparent") {
+        wm.semitransparent = st;
     }
     s.doc.settings.watermark = Some(Watermark { ..wm });
     sel_result(s)

@@ -559,6 +559,14 @@ fn design(app: &mut GoharScribeApp, ui: &mut Ui) {
                 mi(ui, app, w, "design.watermark", json!({"text": w}));
             }
             ui.separator();
+            ui.label("Urdu / Arabic:");
+            // Urdu presets use Nastaleeq; Arabic presets use Naskh.
+            mi(ui, app, "مسودہ (Draft)", "design.watermark", json!({"text": "مسودہ", "font": "Noto Nastaliq Urdu"}));
+            mi(ui, app, "خفیہ (Confidential)", "design.watermark", json!({"text": "خفیہ", "font": "Noto Nastaliq Urdu"}));
+            mi(ui, app, "نمونہ (Sample)", "design.watermark", json!({"text": "نمونہ", "font": "Noto Nastaliq Urdu"}));
+            mi(ui, app, "مسودة (Draft)", "design.watermark", json!({"text": "مسودة", "font": "Noto Naskh Arabic"}));
+            mi(ui, app, "سري (Confidential)", "design.watermark", json!({"text": "سري", "font": "Noto Naskh Arabic"}));
+            ui.separator();
             mi(ui, app, "Custom Watermark…", "ui.dialog", json!({"name": "watermark"}));
             mi(ui, app, "Remove Watermark", "design.watermark", json!({"remove": true}));
         });
