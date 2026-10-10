@@ -366,7 +366,9 @@ fn insert(app: &mut GoharScribeApp, ui: &mut Ui) {
     group(ui, "Pages", None, app, |ui, app| {
         stack(ui, |ui| {
             menu_button(ui, app, "coverPage", Some("Cover Page"), "Cover Page", false, |ui, app| {
-                mi(ui, app, "Studio cover", "insert.coverPage", json!({}));
+                mi(ui, app, "Studio (Modern)", "insert.coverPage", json!({"template": "studio"}));
+                mi(ui, app, "Classic (Scholarly)", "insert.coverPage", json!({"template": "classic"}));
+                mi(ui, app, "Minimal", "insert.coverPage", json!({"template": "minimal"}));
             });
             small(ui, app, "blankPage", Some("Blank Page"), "Blank Page", "insert.blankPage", json!({}), false);
             small(ui, app, "pageBreak", Some("Page Break"), "Page Break", "insert.pageBreak", json!({}), false);

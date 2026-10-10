@@ -22,7 +22,7 @@ pub fn specs() -> Vec<CommandSpec> {
             s.sel = Selection::caret(at);
             sel_result(s)
         }),
-        CommandSpec::new("insert.coverPage", "Cover Page", "Insert › Pages", cover_page).params(r#"{"title"?: string, "subtitle"?: string, "author"?: string}"#),
+        CommandSpec::new("insert.coverPage", "Cover Page", "Insert › Pages", cover_page).params(r#"{"title"?: string, "subtitle"?: string, "author"?: string, "template"?: "studio|classic|minimal"}"#),
         CommandSpec::new("insert.table", "Table", "Insert › Tables", table).params(r#"{"rows": n, "cols": n, "style"?: string}"#),
         CommandSpec::new("insert.picture", "Pictures", "Insert › Illustrations", picture).params(r#"{"path"?: string, "data"?: base64, "width"?: pt, "alt"?: string}"#),
         CommandSpec::new("insert.shape", "Shapes", "Insert › Illustrations", shape)
@@ -543,30 +543,104 @@ fn cover_page(s: &mut Session, v: &Value) -> CmdResult {
     let title = p::str(v, "title").unwrap_or("Document Title").to_string();
     let subtitle = p::str(v, "subtitle").unwrap_or("Document subtitle").to_string();
     let author = p::str(v, "author").unwrap_or(&s.author).to_string();
+    let template = p::str(v, "template").unwrap_or("studio");
+    // RTL detection: if title has RTL chars, use RTL layout with Nastaleeq font.
+    let is_rtl = title.chars().any(|c| matches!(c, '\u{0590}'..='\u{08FF}' | '\u{FB50}'..='\u{FDFF}' | '\u{FE70}'..='\u{FEFF}'));
     let accent = Rgb(0x15, 0x60, 0x82);
     let mut blocks = Vec::new();
-    for _ in 0..8 {
-        blocks.push(Block::Para(Paragraph::new()));
+
+    // Helper to create a styled paragraph with RTL awareness.
+    let make_para = |text: &str, size: f32, bold: bool, color: Option<Rgb>| {
+        let mut props = CharProps { size: Some(size), bold: Some(bold), ..Default::default() };
+        if let Some(c) = color {
+            props.color = Some(TextColor::Rgb(c));
+        }
+        // Request Nastaleeq for RTL titles.
+        if is_rtl {
+            props.font = Some("Noto Nastaliq Urdu".to_string());
+        }
+        let mut p = Paragraph::with_text(text, props);
+        p.props.align = Some(Align::Center);
+        if is_rtl {
+            p.props.bidi = Some(true);
+        }
+        p
+    };
+
+    match template {
+        "classic" => {
+            // Traditional scholarly: double border frame, centered, serif feel.
+            for _ in 0..6 {
+                blocks.push(Block::Para(Paragraph::new()));
+            }
+            let mut t = make_para(&title, 36.0, true, Some(accent));
+            t.props.borders = Some(goharscribe_doc::props::Borders {
+                top: Some(goharscribe_doc::props::Border { style: goharscribe_doc::props::BorderStyle::Double, width: 3.0, color: Some(accent), space: 12.0 }),
+                bottom: Some(goharscribe_doc::props::Border { style: goharscribe_doc::props::BorderStyle::Double, width: 3.0, color: Some(accent), space: 12.0 }),
+                ..Default::default()
+            });
+            blocks.push(Block::Para(t));
+            blocks.push(Block::Para(make_para(&subtitle, 18.0, false, None)));
+            for _ in 0..10 {
+                blocks.push(Block::Para(Paragraph::new()));
+            }
+            blocks.push(Block::Para(make_para(&author, 16.0, true, Some(accent))));
+        }
+        "minimal" => {
+            // Minimalist: lots of whitespace, simple typography.
+            for _ in 0..10 {
+                blocks.push(Block::Para(Paragraph::new()));
+            }
+            blocks.push(Block::Para(make_para(&title, 32.0, false, None)));
+            blocks.push(Block::Para(make_para(&subtitle, 14.0, false, None)));
+            for _ in 0..12 {
+                blocks.push(Block::Para(Paragraph::new()));
+            }
+            blocks.push(Block::Para(make_para(&author, 12.0, false, None)));
+        }
+        _ => {
+            // "studio": modern centered with accent underline (original template).
+            for _ in 0..8 {
+                blocks.push(Block::Para(Paragraph::new()));
+            }
+            let mut t = make_para(&title, 44.0, false, Some(accent));
+            t.props.borders = Some(goharscribe_doc::props::Borders {
+                bottom: Some(goharscribe_doc::props::Border {
+                    style: goharscribe_doc::props::BorderStyle::Single,
+                    width: 2.0,
+                    color: Some(accent),
+                    space: 6.0,
+                }),
+                ..Default::default()
+            });
+            // Keep Title style for non-RTL; RTL uses explicit font.
+            if !is_rtl {
+                t = t.styled("Title");
+                // Re-apply border after styled() (styled may reset props).
+                t.props.borders = Some(goharscribe_doc::props::Borders {
+                    bottom: Some(goharscribe_doc::props::Border {
+                        style: goharscribe_doc::props::BorderStyle::Single,
+                        width: 2.0,
+                        color: Some(accent),
+                        space: 6.0,
+                    }),
+                    ..Default::default()
+                });
+            }
+            blocks.push(Block::Para(t));
+            let mut st = make_para(&subtitle, 20.0, false, None);
+            if !is_rtl {
+                st = st.styled("Subtitle");
+            }
+            blocks.push(Block::Para(st));
+            for _ in 0..14 {
+                blocks.push(Block::Para(Paragraph::new()));
+            }
+            blocks.push(Block::Para(make_para(&author, 16.0, true, Some(accent))));
+        }
     }
-    let mut t =
-        Paragraph::with_text(&title, CharProps { size: Some(44.0), color: Some(TextColor::Rgb(accent)), ..Default::default() }).styled("Title");
-    t.props.borders = Some(goharscribe_doc::props::Borders {
-        bottom: Some(goharscribe_doc::props::Border {
-            style: goharscribe_doc::props::BorderStyle::Single,
-            width: 2.0,
-            color: Some(accent),
-            space: 6.0,
-        }),
-        ..Default::default()
-    });
-    blocks.push(Block::Para(t));
-    blocks.push(Block::Para(Paragraph::with_text(&subtitle, CharProps::default()).styled("Subtitle")));
-    for _ in 0..14 {
-        blocks.push(Block::Para(Paragraph::new()));
-    }
-    blocks
-        .push(Block::Para(Paragraph::with_text(&author, CharProps { bold: Some(true), color: Some(TextColor::Rgb(accent)), ..Default::default() })));
-    let mut date = Paragraph::with_text(&format_date("MMMM d, yyyy"), CharProps::default());
+
+    let mut date = make_para(&format_date("MMMM d, yyyy"), 12.0, false, None);
     date.insert_text(date.len(), "\u{000C}", &CharProps::default())?;
     blocks.push(Block::Para(date));
     let frag = goharscribe_doc::edit::Fragment { blocks };
