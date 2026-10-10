@@ -87,13 +87,22 @@ pub enum Dialog {
     ModifyStyle {
         id: String,
         name: String,
+        style_kind: String,
+        based_on: String,
+        next_style: String,
         font: String,
         size: f32,
         bold: bool,
         italic: bool,
+        underline: bool,
         color: String,
+        align: String,
+        line_spacing: f32,
         before: f32,
         after: f32,
+        add_to_gallery: bool,
+        auto_update: bool,
+        only_this_doc: bool,
     },
     Commands {
         query: String,
@@ -212,19 +221,51 @@ impl Dialog {
             },
         );
         let rp = app.session.doc.styles.resolve_para(&goharscribe_doc::ParaProps { style: Some(id.into()), ..Default::default() });
+        let kind_label = match st.kind {
+            goharscribe_doc::StyleKind::Paragraph => "Paragraph",
+            goharscribe_doc::StyleKind::Character => "Character",
+            goharscribe_doc::StyleKind::Table => "Table",
+            goharscribe_doc::StyleKind::Numbering => "List",
+        };
+        let style_name = |sid: &Option<String>| {
+            sid.as_ref()
+                .and_then(|s| app.session.doc.styles.get(s))
+                .map(|s| s.name.clone())
+                .unwrap_or_default()
+        };
         Some(Dialog::ModifyStyle {
             id: id.into(),
             name: st.name.clone(),
+            style_kind: kind_label.into(),
+            based_on: style_name(&st.based_on),
+            next_style: style_name(&st.next),
             font: rc.font,
             size: rc.size,
             bold: rc.bold,
             italic: rc.italic,
+            underline: rc.underline != goharscribe_doc::props::Underline::None,
             color: match rc.color {
                 goharscribe_doc::TextColor::Rgb(c) => c.hex(),
                 goharscribe_doc::TextColor::Auto => "auto".into(),
             },
+            align: match rp.align {
+                goharscribe_doc::Align::Left => "Left",
+                goharscribe_doc::Align::Center => "Center",
+                goharscribe_doc::Align::Right => "Right",
+                goharscribe_doc::Align::Justify => "Justify",
+                goharscribe_doc::Align::Distribute => "Distribute",
+            }
+            .into(),
+            line_spacing: match rp.line_spacing {
+                goharscribe_doc::props::LineSpacing::Multiple(v) => v,
+                goharscribe_doc::props::LineSpacing::AtLeast(v) => v / 12.0,
+                goharscribe_doc::props::LineSpacing::Exactly(v) => v / 12.0,
+            },
             before: rp.space_before,
             after: rp.space_after,
+            add_to_gallery: st.quick,
+            auto_update: false,
+            only_this_doc: true,
         })
     }
 }
@@ -639,41 +680,261 @@ fn body(app: &mut GoharScribeApp, ui: &mut Ui, d: &mut Dialog) -> bool {
             }
             ok || cancel
         }
-        Dialog::ModifyStyle { id, name, font, size, bold, italic, color, before, after } => {
-            egui::Grid::new("ms").num_columns(2).show(ui, |ui| {
+        Dialog::ModifyStyle {
+            id,
+            name,
+            style_kind,
+            based_on,
+            next_style,
+            font,
+            size,
+            bold,
+            italic,
+            underline,
+            color,
+            align,
+            line_spacing,
+            before,
+            after,
+            add_to_gallery,
+            auto_update,
+            only_this_doc,
+        } => {
+            ui.set_min_width(520.0);
+            // --- Properties section ---
+            ui.label(egui::RichText::new("Properties").strong());
+            let style_names: Vec<String> = app.session.doc.styles.styles.iter().map(|s| s.name.clone()).collect();
+            egui::Grid::new("ms_props").num_columns(2).spacing([8.0, 6.0]).show(ui, |ui| {
                 ui.label("Name:");
                 ui.text_edit_singleline(name);
                 ui.end_row();
-                ui.label("Font:");
-                ui.text_edit_singleline(font);
+                ui.label("Style type:");
+                ui.add_enabled(false, egui::TextEdit::singleline(style_kind).desired_width(280.0));
                 ui.end_row();
-                ui.label("Size:");
-                ui.add(egui::DragValue::new(size).range(1.0..=1638.0).speed(0.5));
+                ui.label("Style based on:");
+                egui::ComboBox::from_id_salt("ms_based_on")
+                    .selected_text(if based_on.is_empty() { "(no style)" } else { based_on.as_str() })
+                    .width(280.0)
+                    .show_ui(ui, |ui| {
+                        if ui.selectable_label(based_on.is_empty(), "(no style)").clicked() {
+                            based_on.clear();
+                        }
+                        for sname in &style_names {
+                            if ui.selectable_label(based_on == sname, sname).clicked() {
+                                *based_on = sname.clone();
+                            }
+                        }
+                    });
                 ui.end_row();
-                ui.label("Color:");
-                ui.text_edit_singleline(color);
+                ui.label("Style for following paragraph:");
+                egui::ComboBox::from_id_salt("ms_next")
+                    .selected_text(if next_style.is_empty() { "(same style)" } else { next_style.as_str() })
+                    .width(280.0)
+                    .show_ui(ui, |ui| {
+                        if ui.selectable_label(next_style.is_empty(), "(same style)").clicked() {
+                            next_style.clear();
+                        }
+                        for sname in &style_names {
+                            if ui.selectable_label(next_style == sname, sname).clicked() {
+                                *next_style = sname.clone();
+                            }
+                        }
+                    });
                 ui.end_row();
-                ui.label("Space before/after:");
-                ui.horizontal(|ui| {
-                    ui.add(egui::DragValue::new(before).range(0.0..=1584.0));
-                    ui.add(egui::DragValue::new(after).range(0.0..=1584.0));
+            });
+            ui.add_space(8.0);
+            ui.separator();
+            // --- Formatting toolbar ---
+            ui.label(egui::RichText::new("Formatting").strong());
+            ui.horizontal_wrapped(|ui| {
+                let fams = app.previews.families();
+                egui::ComboBox::from_id_salt("ms_font").selected_text(font.as_str()).width(150.0).show_ui(ui, |ui| {
+                    for f in &fams {
+                        if ui.selectable_label(font == f, f).clicked() {
+                            *font = f.clone();
+                        }
+                    }
                 });
-                ui.end_row();
-            });
-            ui.horizontal(|ui| {
-                ui.checkbox(bold, "Bold");
-                ui.checkbox(italic, "Italic");
-            });
-            let (ok, cancel) = buttons(ui, "OK");
-            if ok {
-                let mut chr = json!({"font": font, "size": *size, "bold": *bold, "italic": *italic});
-                if let Some(c) = goharscribe_doc::Rgb::parse(color) {
-                    chr["color"] = json!({"Rgb": [c.0, c.1, c.2]});
+                let sizes: Vec<String> = goharscribe_engine::cmd::format::SIZES
+                    .iter()
+                    .map(|s| if s.fract() == 0.0 { format!("{s:.0}") } else { s.to_string() })
+                    .collect();
+                let size_str = if size.fract() == 0.0 { format!("{size:.0}") } else { format!("{size}") };
+                egui::ComboBox::from_id_salt("ms_size").selected_text(size_str).width(60.0).show_ui(ui, |ui| {
+                    for s in &sizes {
+                        if ui.selectable_label(false, s).clicked()
+                            && let Ok(v) = s.parse::<f32>()
+                        {
+                            *size = v;
+                        }
+                    }
+                });
+                ui.separator();
+                if ui.selectable_label(*bold, egui::RichText::new("B").strong()).on_hover_text("Bold").clicked() {
+                    *bold = !*bold;
                 }
-                let _ =
-                    app.run("styles.modify", json!({"style": id, "name": name, "chr": chr, "para": {"spaceBefore": *before, "spaceAfter": *after}}));
+                if ui.selectable_label(*italic, egui::RichText::new("I").italics()).on_hover_text("Italic").clicked() {
+                    *italic = !*italic;
+                }
+                if ui.selectable_label(*underline, egui::RichText::new("U").underline()).on_hover_text("Underline").clicked() {
+                    *underline = !*underline;
+                }
+                ui.separator();
+                let cur_c = goharscribe_doc::Rgb::parse(color).unwrap_or(goharscribe_doc::Rgb(0, 0, 0));
+                let mut srgb = [cur_c.0, cur_c.1, cur_c.2];
+                if ui.color_edit_button_srgb(&mut srgb).on_hover_text("Font color").changed() {
+                    *color = format!("{:02X}{:02X}{:02X}", srgb[0], srgb[1], srgb[2]);
+                }
+            });
+            ui.horizontal_wrapped(|ui| {
+                for (glyph, val, tip) in [("⫷", "Left", "Align Left"), ("⫸", "Center", "Center"), ("⫹", "Right", "Align Right"), ("☰", "Justify", "Justify")] {
+                    if ui.selectable_label(align == val, glyph).on_hover_text(tip).clicked() {
+                        *align = val.into();
+                    }
+                }
+                ui.separator();
+                for (label, val) in [("1.0", 1.0), ("1.5", 1.5), ("2.0", 2.0)] {
+                    if ui.selectable_label((*line_spacing - val).abs() < 0.01, label).on_hover_text(format!("{val}x line spacing")).clicked() {
+                        *line_spacing = val;
+                    }
+                }
+                ui.separator();
+                ui.label("Before:");
+                ui.add(egui::DragValue::new(before).range(0.0..=1584.0).speed(1.0).suffix(" pt"));
+                ui.label("After:");
+                ui.add(egui::DragValue::new(after).range(0.0..=1584.0).speed(1.0).suffix(" pt"));
+            });
+            ui.add_space(6.0);
+            // --- Preview ---
+            let mut preview_rt = egui::RichText::new("Sample Text Sample Text Sample Text").font(egui::FontId::new(*size, egui::FontFamily::Proportional));
+            if *bold {
+                preview_rt = preview_rt.strong();
             }
-            ok || cancel
+            if *italic {
+                preview_rt = preview_rt.italics();
+            }
+            if *underline {
+                preview_rt = preview_rt.underline();
+            }
+            if let Some(c) = goharscribe_doc::Rgb::parse(color) {
+                preview_rt = preview_rt.color(egui::Color32::from_rgb(c.0, c.1, c.2));
+            }
+            let preview_align = match align.as_str() {
+                "Center" => egui::Align::Center,
+                "Right" => egui::Align::RIGHT,
+                _ => egui::Align::LEFT,
+            };
+            egui::Frame::group(ui.style()).show(ui, |ui| {
+                ui.set_min_size(vec2(480.0, 80.0));
+                ui.with_layout(egui::Layout::top_down(preview_align), |ui| {
+                    ui.label(egui::RichText::new("Previous Paragraph").small().weak());
+                    ui.label(preview_rt);
+                    ui.label(egui::RichText::new("Following Paragraph").small().weak());
+                });
+            });
+            ui.add_space(4.0);
+            // --- Description ---
+            let desc = format!(
+                "Font: {}{}, {} pt{}{}, Font color: {}, {}",
+                font,
+                if *bold { ", Bold" } else { "" },
+                if size.fract() == 0.0 { format!("{size:.0}") } else { format!("{size}") },
+                if *italic { ", Italic" } else { "" },
+                if *underline { ", Underline" } else { "" },
+                color,
+                align,
+            );
+            let desc2 = format!("Space Before: {before} pt, After: {after} pt, Line spacing: {line_spacing}x, Style: {style_kind}");
+            egui::ScrollArea::vertical().max_height(44.0).show(ui, |ui| {
+                ui.label(egui::RichText::new(desc).small());
+                ui.label(egui::RichText::new(desc2).small());
+            });
+            ui.add_space(4.0);
+            // --- Options ---
+            ui.checkbox(add_to_gallery, "Add to the Styles gallery");
+            ui.checkbox(auto_update, "Automatically update (applies on next use)");
+            ui.add_space(2.0);
+            ui.horizontal(|ui| {
+                if ui.radio(*only_this_doc, "Only in this document").clicked() {
+                    *only_this_doc = true;
+                }
+                if ui.radio(!*only_this_doc, "New documents based on this template").clicked() {
+                    *only_this_doc = false;
+                }
+            });
+            ui.add_space(4.0);
+            // --- Bottom row: Format menu + OK/Cancel ---
+            let mut done = false;
+            ui.horizontal(|ui| {
+                ui.menu_button("Format ▾", |ui| {
+                    if ui.button("Font…").clicked() {
+                        ui.close();
+                    }
+                    if ui.button("Paragraph…").clicked() {
+                        ui.close();
+                    }
+                    ui.label(egui::RichText::new("Tabs, Borders, Numbering: use the ribbon").small().weak());
+                });
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if ui.button("Cancel").clicked() {
+                        done = true;
+                    }
+                    if ui.button("OK").clicked() {
+                        let mut chr = serde_json::json!({
+                            "font": font,
+                            "size": *size,
+                            "bold": *bold,
+                            "italic": *italic,
+                        });
+                        if *underline {
+                            chr["underline"] = serde_json::json!({"style": "single"});
+                        }
+                        if let Some(c) = goharscribe_doc::Rgb::parse(color) {
+                            chr["color"] = serde_json::json!({"Rgb": [c.0, c.1, c.2]});
+                        }
+                        let align_val = match align.as_str() {
+                            "Center" => "center",
+                            "Right" => "right",
+                            "Justify" => "justify",
+                            _ => "left",
+                        };
+                        let para = serde_json::json!({
+                            "align": align_val,
+                            "lineSpacing": {"Multiple": *line_spacing},
+                            "spaceBefore": *before,
+                            "spaceAfter": *after,
+                        });
+                        let to_id = |display: &str| {
+                            if display.is_empty() {
+                                String::new()
+                            } else {
+                                app.session
+                                    .doc
+                                    .styles
+                                    .styles
+                                    .iter()
+                                    .find(|s| s.name == display)
+                                    .map(|s| s.id.clone())
+                                    .unwrap_or_default()
+                            }
+                        };
+                        let _ = app.run(
+                            "styles.modify",
+                            serde_json::json!({
+                                "style": id,
+                                "name": name,
+                                "chr": chr,
+                                "para": para,
+                                "basedOn": to_id(based_on),
+                                "next": to_id(next_style),
+                                "quick": *add_to_gallery,
+                            }),
+                        );
+                        done = true;
+                    }
+                });
+            });
+            done
         }
         Dialog::Commands { query } => {
             let r = ui.add(egui::TextEdit::singleline(query).hint_text("Type a command, e.g. \"insert table\"").desired_width(380.0));

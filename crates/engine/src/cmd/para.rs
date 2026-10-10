@@ -148,7 +148,7 @@ pub fn specs() -> Vec<CommandSpec> {
         })
         .pure(),
         CommandSpec::new("styles.create", "Create a Style", "Home › Styles", create_style).params(r#"{"name": string, "basedOn"?: string, "fromSelection"?: bool}"#),
-        CommandSpec::new("styles.modify", "Modify Style", "Home › Styles", modify_style).params(r#"{"style": string, "chr"?: CharProps, "para"?: ParaProps, "name"?: string, "next"?: string}"#),
+        CommandSpec::new("styles.modify", "Modify Style", "Home › Styles", modify_style).params(r#"{"style": string, "chr"?: CharProps, "para"?: ParaProps, "name"?: string, "next"?: string, "basedOn"?: string, "quick"?: boolean}"#),
         CommandSpec::new("styles.updateToMatch", "Update Style to Match Selection", "Home › Styles", update_to_match).params(r#"{"style"?: string}"#),
         CommandSpec::new("styles.delete", "Delete Style", "Home › Styles", |s, v| {
             let id = style_id(s, p::req_str(v, "style")?)?;
@@ -506,6 +506,8 @@ fn modify_style(s: &mut Session, v: &Value) -> CmdResult {
         v.get("para").map(|c| serde_json::from_value(c.clone())).transpose().map_err(|e| CmdError::Params(e.to_string()))?;
     let next = p::str(v, "next").map(str::to_string);
     let name = p::str(v, "name").map(str::to_string);
+    let based_on = v.get("basedOn").and_then(|b| b.as_str()).map(str::to_string);
+    let quick = v.get("quick").and_then(serde_json::Value::as_bool);
     let st = s.doc.styles.get_mut(&id).ok_or_else(|| CmdError::Params("no such style".into()))?;
     if let Some(c) = chr {
         st.chr.overlay(&c);
@@ -515,6 +517,12 @@ fn modify_style(s: &mut Session, v: &Value) -> CmdResult {
     }
     if let Some(n) = next {
         st.next = Some(n);
+    }
+    if let Some(b) = based_on {
+        st.based_on = if b.is_empty() { None } else { Some(b) };
+    }
+    if let Some(q) = quick {
+        st.quick = q;
     }
     if let Some(n) = name.filter(|n| !n.trim().is_empty()) {
         st.name = n;
