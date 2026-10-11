@@ -127,6 +127,7 @@ fn mi(ui: &mut Ui, app: &mut GoharScribeApp, label: &str, id: &str, params: Valu
     let resp = ui.add_enabled(enabled, egui::Button::new(label).shortcut_text(sc).min_size(vec2(200.0, 0.0)));
     if resp.clicked() {
         let _ = app.run(id, params);
+        app.canvas.want_focus = true;
         ui.close();
     }
 }
@@ -158,6 +159,7 @@ fn home(app: &mut GoharScribeApp, ui: &mut Ui) {
                 // hangs on complex fonts (e.g., Noto Nastaliq Urdu). Use plain labels.
                 if let Some(f) = combo(ui, "font", 150.0, &font, &fams, None) {
                     let _ = app.run("format.font", json!({"name": f}));
+                    app.canvas.want_focus = true;
                 }
                 let size = st
                     .get("size")
@@ -170,6 +172,7 @@ fn home(app: &mut GoharScribeApp, ui: &mut Ui) {
                     && let Ok(x) = v.trim().parse::<f64>()
                 {
                     let _ = app.run("format.size", json!({"size": x}));
+                    app.canvas.want_focus = true;
                 }
                 ui.add_space(3.0);
                 small(ui, app, "grow", None, "Increase Font Size", "format.growFont", json!({}), false);
@@ -560,12 +563,13 @@ fn design(app: &mut GoharScribeApp, ui: &mut Ui) {
             }
             ui.separator();
             ui.label("Urdu / Arabic:");
-            // Urdu presets use Nastaleeq; Arabic presets use Naskh.
-            mi(ui, app, "مسودہ (Draft)", "design.watermark", json!({"text": "مسودہ", "font": "Noto Nastaliq Urdu"}));
-            mi(ui, app, "خفیہ (Confidential)", "design.watermark", json!({"text": "خفیہ", "font": "Noto Nastaliq Urdu"}));
-            mi(ui, app, "نمونہ (Sample)", "design.watermark", json!({"text": "نمونہ", "font": "Noto Nastaliq Urdu"}));
-            mi(ui, app, "مسودة (Draft)", "design.watermark", json!({"text": "مسودة", "font": "Noto Naskh Arabic"}));
-            mi(ui, app, "سري (Confidential)", "design.watermark", json!({"text": "سري", "font": "Noto Naskh Arabic"}));
+            // Use system fonts with Arabic support; Noto fonts may not be installed.
+            // Arial has good Arabic coverage on Windows.
+            mi(ui, app, "مسودہ (Draft)", "design.watermark", json!({"text": "مسودہ", "font": "Arial"}));
+            mi(ui, app, "خفیہ (Confidential)", "design.watermark", json!({"text": "خفیہ", "font": "Arial"}));
+            mi(ui, app, "نمونہ (Sample)", "design.watermark", json!({"text": "نمونہ", "font": "Arial"}));
+            mi(ui, app, "مسودة (Draft)", "design.watermark", json!({"text": "مسودة", "font": "Arial"}));
+            mi(ui, app, "سري (Confidential)", "design.watermark", json!({"text": "سري", "font": "Arial"}));
             ui.separator();
             mi(ui, app, "Custom Watermark…", "ui.dialog", json!({"name": "watermark"}));
             mi(ui, app, "Remove Watermark", "design.watermark", json!({"remove": true}));

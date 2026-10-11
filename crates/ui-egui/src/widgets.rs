@@ -110,6 +110,8 @@ pub fn small(ui: &mut Ui, app: &mut GoharScribeApp, icon: &str, label: Option<&s
     let resp = tooltip(app, resp, tip, id);
     if resp.clicked() && on {
         let _ = app.run(id, params);
+        // Return focus to the canvas so keyboard shortcuts keep working.
+        app.canvas.want_focus = true;
     }
     resp
 }
