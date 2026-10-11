@@ -105,13 +105,15 @@ fn main() -> eframe::Result {
     let mut control_port: Option<u16> = std::env::var("GOHARSCRIBE_CONTROL_PORT").ok().and_then(|p| p.parse().ok());
     let mut files = Vec::new();
     let mut sample = false;
-    let mut use_glow = false;
+    let mut force_glow = false;
+    let mut force_wgpu = false;
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
         match a.as_str() {
             "--control" => control_port = args.next().and_then(|p| p.parse().ok()),
             "--sample" => sample = true,
-            "--glow" => use_glow = true,
+            "--glow" => force_glow = true,
+            "--wgpu" => force_wgpu = true,
             "--version" => {
                 println!(
                     "goharscribe {} ({})",
@@ -123,12 +125,18 @@ fn main() -> eframe::Result {
             _ => files.push(a),
         }
     }
+    // Default to Glow (OpenGL) on Windows: wgpu/DX12 hangs on some drivers/VMs
+    // ("Not Responding" with black screen). Wgpu remains default elsewhere.
+    // Override with --wgpu or --glow.
+    let renderer = if force_wgpu {
+        eframe::Renderer::Wgpu
+    } else if force_glow || cfg!(target_os = "windows") {
+        eframe::Renderer::Glow
+    } else {
+        eframe::Renderer::Wgpu
+    };
     let mut options = eframe::NativeOptions {
-        renderer: if use_glow {
-            eframe::Renderer::Glow
-        } else {
-            eframe::Renderer::Wgpu
-        },
+        renderer,
         viewport: egui::ViewportBuilder::default()
             .with_title("GoharScribe")
             .with_app_id("com.talhagohar.goharscribe")
